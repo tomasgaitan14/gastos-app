@@ -90,7 +90,7 @@ export function Expenses() {
                 </div>
                 <div className="bg-white rounded-2xl border border-zinc-200/60 overflow-hidden">
                   {items.map((expense, i) => {
-                    const payer = members.find(m => m.user_id === expense.paid_by)
+                    const payer = members.find(m => m.id === expense.paid_by)
                     return (
                       <Link
                         key={expense.id}
@@ -108,7 +108,7 @@ export function Expenses() {
                           <div className="flex items-center gap-2 mt-0.5">
                             {payer && (
                               <span className="text-xs text-zinc-400">
-                                {payer.display_name.split(' ')[0]}
+                                {payer.name.split(' ')[0]}
                               </span>
                             )}
                             <span className="text-xs text-zinc-300">·</span>
