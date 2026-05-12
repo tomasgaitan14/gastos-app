@@ -1,0 +1,18 @@
+{
+  "name": "Gastos Compartidos",
+  "short_name": "Gastos",
+  "description": "Seguimiento de gastos compartidos con división proporcional por salario",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f4f4f5",
+  "theme_color": "#f4f4f5",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
