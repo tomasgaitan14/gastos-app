@@ -76,6 +76,51 @@ export function useCreateExpense() {
   })
 }
 
+export function useUpdateExpense() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, payload, members, exchangeRate }: { id: string; payload: NewExpensePayload; members: Member[]; exchangeRate: number }) => {
+      const { error: expenseError } = await supabase
+        .from('expenses')
+        .update({
+          description: payload.description,
+          amount: payload.amount,
+          currency: payload.currency,
+          paid_by: payload.paid_by,
+          category: payload.category,
+          date: payload.date,
+          is_recurring: payload.is_recurring,
+          recurrence_type: payload.recurrence_type,
+          notes: payload.notes || null,
+        })
+        .eq('id', id)
+      if (expenseError) throw expenseError
+
+      const { error: deleteError } = await supabase
+        .from('expense_splits')
+        .delete()
+        .eq('expense_id', id)
+      if (deleteError) throw deleteError
+
+      const splits = calculateSplits(payload.amount, members, payload.excluded_member_ids, exchangeRate)
+      const splitsToInsert = splits.map(s => ({
+        expense_id: id,
+        user_id: s.member_id,
+        percentage: s.percentage,
+        amount: s.amount,
+        is_excluded: s.is_excluded,
+      }))
+      const { error: splitsError } = await supabase.from('expense_splits').insert(splitsToInsert)
+      if (splitsError) throw splitsError
+    },
+    onSuccess: (_, { id }) => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.EXPENSES })
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.EXPENSE(id) })
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.BALANCE })
+    },
+  })
+}
+
 export function useDeleteExpense() {
   const queryClient = useQueryClient()
   return useMutation({

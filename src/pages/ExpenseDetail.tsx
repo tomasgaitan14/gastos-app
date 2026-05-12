@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { Trash } from '@phosphor-icons/react'
+import { Trash, PencilSimple } from '@phosphor-icons/react'
 import { useExpense, useDeleteExpense } from '@/hooks/useExpenses'
 import { useMembers } from '@/hooks/useMembers'
 import { formatCurrency } from '@/lib/calculations'
@@ -55,9 +55,14 @@ export function ExpenseDetail() {
         title="Detalle"
         back
         right={
-          <button onClick={() => setConfirmOpen(true)} className="w-8 h-8 flex items-center justify-center rounded-lg text-rose-500 hover:bg-rose-50 transition-colors">
-            <Trash size={18} />
-          </button>
+          <div className="flex items-center gap-1">
+            <button onClick={() => navigate(`/expenses/${id}/edit`)} className="w-8 h-8 flex items-center justify-center rounded-lg text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100 transition-colors">
+              <PencilSimple size={18} />
+            </button>
+            <button onClick={() => setConfirmOpen(true)} className="w-8 h-8 flex items-center justify-center rounded-lg text-rose-500 hover:bg-rose-50 transition-colors">
+              <Trash size={18} />
+            </button>
+          </div>
         }
       />
 

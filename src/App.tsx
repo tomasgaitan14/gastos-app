@@ -10,6 +10,7 @@ import { NewExpense } from '@/pages/NewExpense'
 import { ExpenseDetail } from '@/pages/ExpenseDetail'
 import { Balance } from '@/pages/Balance'
 import { Settings } from '@/pages/Settings'
+import { EditExpense } from '@/pages/EditExpense'
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, refetchOnWindowFocus: false } },
@@ -24,6 +25,7 @@ function AppLayout() {
         <Route path="/expenses" element={<ProtectedRoute><Expenses /></ProtectedRoute>} />
         <Route path="/expenses/new" element={<ProtectedRoute><NewExpense /></ProtectedRoute>} />
         <Route path="/expenses/:id" element={<ProtectedRoute><ExpenseDetail /></ProtectedRoute>} />
+        <Route path="/expenses/:id/edit" element={<ProtectedRoute><EditExpense /></ProtectedRoute>} />
         <Route path="/balance" element={<ProtectedRoute><Balance /></ProtectedRoute>} />
         <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
