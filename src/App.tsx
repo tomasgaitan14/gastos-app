@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { Analytics } from '@vercel/analytics/react'
 import { AuthProvider } from '@/contexts/AuthContext'
 import { ProtectedRoute } from '@/components/layout/ProtectedRoute'
 import { BottomNav } from '@/components/layout/BottomNav'
@@ -47,6 +48,7 @@ export default function App() {
       <BrowserRouter>
         <AuthProvider>
           <AppLayout />
+          <Analytics />
         </AuthProvider>
       </BrowserRouter>
     </QueryClientProvider>
