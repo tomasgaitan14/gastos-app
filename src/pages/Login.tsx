@@ -108,6 +108,11 @@ export function Login() {
             <Button type="submit" size="lg" fullWidth loading={submitting} className="mt-1">
               {mode === 'login' ? 'Ingresar' : 'Crear cuenta'}
             </Button>
+            {mode === 'register' && (
+              <p className="text-xs text-zinc-400 text-center">
+                No hace falta confirmar el correo. Luego de registrarte ya podés ingresar.
+              </p>
+            )}
           </motion.form>
         </AnimatePresence>
       </div>
