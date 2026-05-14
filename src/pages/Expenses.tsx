@@ -7,6 +7,7 @@ import { UserPlus, Plus } from '@phosphor-icons/react'
 import { useExpenses } from '@/hooks/useExpenses'
 import { useMembers } from '@/hooks/useMembers'
 import { usePersonalExpenses } from '@/hooks/usePersonalExpenses'
+import { useExchangeRate } from '@/hooks/useExchangeRate'
 import { formatCurrency } from '@/lib/calculations'
 import { RECURRENCE_LABELS } from '@/constants'
 import { Badge } from '@/components/ui/Badge'
@@ -109,6 +110,16 @@ export function Expenses() {
     return Object.entries(groups).sort((a, b) => b[0].localeCompare(a[0]))
   }, [filteredPersonal])
 
+  const { rate } = useExchangeRate()
+
+  const sharedTotal = useMemo(() =>
+    filteredShared.reduce((sum, e) => sum + (e.currency === 'USD' ? e.amount * rate : e.amount), 0),
+  [filteredShared, rate])
+
+  const personalTotal = useMemo(() =>
+    filteredPersonal.reduce((sum, e) => sum + (e.currency === 'USD' ? e.amount * rate : e.amount), 0),
+  [filteredPersonal, rate])
+
   const memberOptions = members.map(m => ({ value: m.id, label: m.name }))
 
   return (
@@ -149,7 +160,17 @@ export function Expenses() {
             </div>
           </div>
 
-          <div className="px-4 pt-3 flex flex-col gap-5">
+          {!loadingShared && filteredShared.length > 0 && (
+            <div className="px-4 pt-2 flex items-center justify-between">
+              <span className="text-xs text-zinc-400">{filteredShared.length} gastos</span>
+              <div className="text-right">
+                <span className="text-sm font-semibold text-zinc-900">{formatCurrency(sharedTotal, 'ARS')}</span>
+                {rate > 0 && <span className="text-xs text-zinc-400 ml-1.5">~ {formatCurrency(sharedTotal / rate, 'USD')}</span>}
+              </div>
+            </div>
+          )}
+
+          <div className="px-4 pt-2 flex flex-col gap-5">
             {loadingShared ? (
               <div className="bg-white rounded-2xl border border-zinc-200/60 overflow-hidden">
                 {Array.from({ length: 5 }).map((_, i) => <ExpenseItemSkeleton key={i} />)}
@@ -194,7 +215,17 @@ export function Expenses() {
             </div>
           )}
 
-          <div className="px-4 pt-3 flex flex-col gap-5">
+          {!loadingPersonal && filteredPersonal.length > 0 && (
+            <div className="px-4 pt-1 flex items-center justify-between">
+              <span className="text-xs text-zinc-400">{filteredPersonal.length} gastos</span>
+              <div className="text-right">
+                <span className="text-sm font-semibold text-zinc-900">{formatCurrency(personalTotal, 'ARS')}</span>
+                {rate > 0 && <span className="text-xs text-zinc-400 ml-1.5">~ {formatCurrency(personalTotal / rate, 'USD')}</span>}
+              </div>
+            </div>
+          )}
+
+          <div className="px-4 pt-2 flex flex-col gap-5">
             {!selectedMemberId ? (
               <div className="py-16 flex flex-col items-center gap-3">
                 <UserPlus size={32} className="text-zinc-300" />
