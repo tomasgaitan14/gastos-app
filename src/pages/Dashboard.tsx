@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { format } from 'date-fns'
@@ -8,10 +8,14 @@ import { useExpenses } from '@/hooks/useExpenses'
 import { useBalance } from '@/hooks/useBalance'
 import { useExchangeRate } from '@/hooks/useExchangeRate'
 import { useMembers } from '@/hooks/useMembers'
+import { usePersonalExpenses } from '@/hooks/usePersonalExpenses'
 import { formatCurrency } from '@/lib/calculations'
 import { Badge } from '@/components/ui/Badge'
+import { Select } from '@/components/ui/Select'
 import { TopBar } from '@/components/layout/TopBar'
 import { ExpenseItemSkeleton } from '@/components/ui/Skeleton'
+
+type Tab = 'compartidos' | 'personal'
 
 export function Dashboard() {
   const { data: expenses = [], isLoading: loadingExpenses } = useExpenses()
@@ -19,7 +23,19 @@ export function Dashboard() {
   const { rate, updatedAt } = useExchangeRate()
   const { data: members = [] } = useMembers()
 
+  const [recentTab, setRecentTab] = useState<Tab>('compartidos')
+  const [selectedMemberId, setSelectedMemberId] = useState('')
+
+  useEffect(() => {
+    if (!selectedMemberId && members.length > 0) setSelectedMemberId(members[0].id)
+  }, [members, selectedMemberId])
+
+  const { data: personalExpenses = [], isLoading: loadingPersonal } = usePersonalExpenses(
+    recentTab === 'personal' ? selectedMemberId : null
+  )
+
   const recentExpenses = expenses.slice(0, 5)
+  const recentPersonal = personalExpenses.slice(0, 5)
 
   const thisMonthTotal = useMemo(() => {
     const now = new Date()
@@ -102,43 +118,104 @@ export function Dashboard() {
 
         {/* Últimos gastos */}
         <section>
-          <SectionHeader title="Últimos gastos" to="/expenses" />
-          {loadingExpenses ? (
-            <div className="bg-white rounded-2xl border border-zinc-200/60 overflow-hidden">
-              {Array.from({ length: 3 }).map((_, i) => <ExpenseItemSkeleton key={i} />)}
-            </div>
-          ) : recentExpenses.length === 0 ? (
-            <div className="bg-white rounded-2xl border border-zinc-200/60 py-10 flex flex-col items-center gap-2">
-              <p className="text-sm text-zinc-500">Sin gastos todavía</p>
-              <p className="text-xs text-zinc-400">Tocá el + para agregar el primero</p>
-            </div>
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-sm font-semibold text-zinc-700">Últimos gastos</h3>
+            <Link
+              to={recentTab === 'personal' ? `/expenses?tab=personal&member=${selectedMemberId}` : '/expenses'}
+              className="flex items-center gap-1 text-xs text-emerald-600 font-medium"
+            >
+              Ver todo <ArrowRight size={12} />
+            </Link>
+          </div>
+
+          {/* Toggle compartidos / personal */}
+          <div className="flex bg-zinc-100 rounded-xl p-1 mb-3">
+            {(['compartidos', 'personal'] as Tab[]).map(t => (
+              <button key={t} onClick={() => setRecentTab(t)}
+                className={['flex-1 py-1.5 rounded-lg text-xs font-medium transition-colors', recentTab === t ? 'bg-white text-zinc-900 shadow-sm' : 'text-zinc-400'].join(' ')}>
+                {t === 'compartidos' ? 'Compartidos' : 'Personales'}
+              </button>
+            ))}
+          </div>
+
+          {recentTab === 'compartidos' ? (
+            loadingExpenses ? (
+              <div className="bg-white rounded-2xl border border-zinc-200/60 overflow-hidden">
+                {Array.from({ length: 3 }).map((_, i) => <ExpenseItemSkeleton key={i} />)}
+              </div>
+            ) : recentExpenses.length === 0 ? (
+              <div className="bg-white rounded-2xl border border-zinc-200/60 py-10 flex flex-col items-center gap-2">
+                <p className="text-sm text-zinc-500">Sin gastos todavía</p>
+                <p className="text-xs text-zinc-400">Tocá el + para agregar el primero</p>
+              </div>
+            ) : (
+              <div className="bg-white rounded-2xl border border-zinc-200/60 overflow-hidden">
+                {recentExpenses.map((expense, i) => {
+                  const payer = members.find(m => m.id === expense.paid_by)
+                  return (
+                    <Link key={expense.id} to={`/expenses/${expense.id}`}
+                      className={['flex items-center gap-3 px-4 py-3 hover:bg-zinc-50 transition-colors', i > 0 ? 'border-t border-zinc-100' : ''].join(' ')}>
+                      <div className="w-10 h-10 bg-zinc-100 rounded-xl flex items-center justify-center text-lg shrink-0">
+                        {categoryEmoji(expense.category)}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-zinc-900 truncate">{expense.description}</p>
+                        <p className="text-xs text-zinc-400 mt-0.5">
+                          {payer?.name.split(' ')[0]} · {format(new Date(expense.date), 'd MMM', { locale: es })}
+                        </p>
+                      </div>
+                      <div className="flex flex-col items-end shrink-0 gap-1">
+                        <span className="text-sm font-semibold text-zinc-900">{formatCurrency(expense.amount, expense.currency)}</span>
+                        {expense.is_recurring && <Badge variant="neutral">recurrente</Badge>}
+                      </div>
+                    </Link>
+                  )
+                })}
+              </div>
+            )
           ) : (
-            <div className="bg-white rounded-2xl border border-zinc-200/60 overflow-hidden">
-              {recentExpenses.map((expense, i) => {
-                const payer = members.find(m => m.id === expense.paid_by)
-                return (
-                  <Link
-                    key={expense.id}
-                    to={`/expenses/${expense.id}`}
-                    className={['flex items-center gap-3 px-4 py-3 hover:bg-zinc-50 transition-colors', i > 0 ? 'border-t border-zinc-100' : ''].join(' ')}
-                  >
-                    <div className="w-10 h-10 bg-zinc-100 rounded-xl flex items-center justify-center text-lg shrink-0">
-                      {categoryEmoji(expense.category)}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-zinc-900 truncate">{expense.description}</p>
-                      <p className="text-xs text-zinc-400 mt-0.5">
-                        {payer?.name.split(' ')[0]} · {format(new Date(expense.date), 'd MMM', { locale: es })}
-                      </p>
-                    </div>
-                    <div className="flex flex-col items-end shrink-0 gap-1">
-                      <span className="text-sm font-semibold text-zinc-900">{formatCurrency(expense.amount, expense.currency)}</span>
-                      {expense.is_recurring && <Badge variant="neutral">recurrente</Badge>}
-                    </div>
-                  </Link>
-                )
-              })}
-            </div>
+            <>
+              {members.length > 1 && (
+                <div className="mb-3">
+                  <Select
+                    options={members.map(m => ({ value: m.id, label: m.name }))}
+                    value={selectedMemberId}
+                    onChange={e => setSelectedMemberId(e.target.value)}
+                  />
+                </div>
+              )}
+              {loadingPersonal ? (
+                <div className="bg-white rounded-2xl border border-zinc-200/60 overflow-hidden">
+                  {Array.from({ length: 3 }).map((_, i) => <ExpenseItemSkeleton key={i} />)}
+                </div>
+              ) : recentPersonal.length === 0 ? (
+                <div className="bg-white rounded-2xl border border-zinc-200/60 py-10 flex flex-col items-center gap-2">
+                  <p className="text-sm text-zinc-500">Sin gastos personales</p>
+                  <p className="text-xs text-zinc-400">Tocá el + para agregar el primero</p>
+                </div>
+              ) : (
+                <div className="bg-white rounded-2xl border border-zinc-200/60 overflow-hidden">
+                  {recentPersonal.map((expense, i) => (
+                    <Link key={expense.id} to={`/personal/${expense.id}`}
+                      className={['flex items-center gap-3 px-4 py-3 hover:bg-zinc-50 transition-colors', i > 0 ? 'border-t border-zinc-100' : ''].join(' ')}>
+                      <div className="w-10 h-10 bg-zinc-100 rounded-xl flex items-center justify-center text-lg shrink-0">
+                        {categoryEmoji(expense.category)}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-zinc-900 truncate">{expense.description}</p>
+                        <p className="text-xs text-zinc-400 mt-0.5">
+                          {format(new Date(expense.date), 'd MMM', { locale: es })}
+                        </p>
+                      </div>
+                      <div className="flex flex-col items-end shrink-0 gap-1">
+                        <span className="text-sm font-semibold text-zinc-900">{formatCurrency(expense.amount, expense.currency)}</span>
+                        {expense.is_recurring && <Badge variant="neutral">recurrente</Badge>}
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </>
           )}
         </section>
 
