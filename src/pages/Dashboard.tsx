@@ -39,13 +39,19 @@ export function Dashboard() {
 
   const thisMonthTotal = useMemo(() => {
     const now = new Date()
+    const isThisMonth = (date: string) => {
+      const d = new Date(date)
+      return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()
+    }
+    if (recentTab === 'personal') {
+      return personalExpenses
+        .filter(e => isThisMonth(e.date))
+        .reduce((sum, e) => sum + (e.currency === 'USD' ? e.amount * rate : e.amount), 0)
+    }
     return expenses
-      .filter(e => {
-        const d = new Date(e.date)
-        return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()
-      })
+      .filter(e => isThisMonth(e.date))
       .reduce((sum, e) => sum + (e.currency === 'USD' ? e.amount * rate : e.amount), 0)
-  }, [expenses, rate])
+  }, [expenses, personalExpenses, recentTab, rate])
 
   const greeting = () => {
     const h = new Date().getHours()
@@ -71,9 +77,9 @@ export function Dashboard() {
         {/* Cards resumen */}
         <div className="grid grid-cols-2 gap-3">
           <SummaryCard
-            label="Gastos este mes"
+            label={recentTab === 'personal' ? 'Gastos personales' : 'Gastos este mes'}
             value={formatCurrency(thisMonthTotal, 'ARS')}
-            sub={`${expenses.filter(e => { const d = new Date(e.date); const n = new Date(); return d.getMonth() === n.getMonth() }).length} gastos`}
+            sub={`${(recentTab === 'personal' ? personalExpenses : expenses).filter(e => { const d = new Date(e.date); const n = new Date(); return d.getMonth() === n.getMonth() && d.getFullYear() === n.getFullYear() }).length} gastos`}
           />
           <SummaryCard
             label="Miembros"
