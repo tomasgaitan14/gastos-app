@@ -24,12 +24,18 @@ const SHARED_FILTERS: { value: SharedFilter; label: string }[] = [
   { value: 'unicos', label: 'Únicos' },
 ]
 
+function monthLabel(key: string) {
+  return format(new Date(key + '-01'), 'MMMM yyyy', { locale: es })
+}
+
 export function Expenses() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
 
   const [tab, setTab] = useState<Tab>((searchParams.get('tab') as Tab) ?? 'compartidos')
   const [sharedFilter, setSharedFilter] = useState<SharedFilter>('todos')
+  const [filterMemberId, setFilterMemberId] = useState('')
+  const [filterMonth, setFilterMonth] = useState('')
 
   const { data: expenses = [], isLoading: loadingShared } = useExpenses()
   const { data: members = [] } = useMembers()
@@ -46,12 +52,36 @@ export function Expenses() {
     tab === 'personal' ? selectedMemberId : null
   )
 
-  // Shared expenses filtered + grouped
+  // Reset month filter when switching tabs
+  useEffect(() => { setFilterMonth('') }, [tab])
+
+  // Shared: available months (from all expenses, before month filter)
+  const sharedMonthOptions = useMemo(() => {
+    const keys = new Set(expenses.map(e => format(new Date(e.date), 'yyyy-MM')))
+    return [{ value: '', label: 'Todos los meses' }, ...[...keys].sort((a, b) => b.localeCompare(a)).map(k => ({ value: k, label: monthLabel(k) }))]
+  }, [expenses])
+
+  // Personal: available months
+  const personalMonthOptions = useMemo(() => {
+    const keys = new Set(personalExpenses.map(e => format(new Date(e.date), 'yyyy-MM')))
+    return [{ value: '', label: 'Todos los meses' }, ...[...keys].sort((a, b) => b.localeCompare(a)).map(k => ({ value: k, label: monthLabel(k) }))]
+  }, [personalExpenses])
+
+  // Member options for shared filter
+  const memberFilterOptions = useMemo(() => [
+    { value: '', label: 'Todos los miembros' },
+    ...members.map(m => ({ value: m.id, label: m.name })),
+  ], [members])
+
+  // Shared expenses: apply all filters
   const filteredShared = useMemo(() => {
-    if (sharedFilter === 'recurrentes') return expenses.filter(e => e.is_recurring)
-    if (sharedFilter === 'unicos') return expenses.filter(e => !e.is_recurring)
-    return expenses
-  }, [expenses, sharedFilter])
+    let list = expenses
+    if (filterMemberId) list = list.filter(e => e.paid_by === filterMemberId)
+    if (sharedFilter === 'recurrentes') list = list.filter(e => e.is_recurring)
+    else if (sharedFilter === 'unicos') list = list.filter(e => !e.is_recurring)
+    if (filterMonth) list = list.filter(e => format(new Date(e.date), 'yyyy-MM') === filterMonth)
+    return list
+  }, [expenses, filterMemberId, sharedFilter, filterMonth])
 
   const groupedShared = useMemo(() => {
     const groups: Record<string, ExpenseWithSplits[]> = {}
@@ -63,16 +93,21 @@ export function Expenses() {
     return Object.entries(groups).sort((a, b) => b[0].localeCompare(a[0]))
   }, [filteredShared])
 
-  // Personal expenses grouped
+  // Personal expenses: apply month filter
+  const filteredPersonal = useMemo(() => {
+    if (!filterMonth) return personalExpenses
+    return personalExpenses.filter(e => format(new Date(e.date), 'yyyy-MM') === filterMonth)
+  }, [personalExpenses, filterMonth])
+
   const groupedPersonal = useMemo(() => {
     const groups: Record<string, PersonalExpense[]> = {}
-    for (const expense of personalExpenses) {
+    for (const expense of filteredPersonal) {
       const key = format(new Date(expense.date), 'yyyy-MM')
       if (!groups[key]) groups[key] = []
       groups[key].push(expense)
     }
     return Object.entries(groups).sort((a, b) => b[0].localeCompare(a[0]))
-  }, [personalExpenses])
+  }, [filteredPersonal])
 
   const memberOptions = members.map(m => ({ value: m.id, label: m.name }))
 
@@ -94,7 +129,8 @@ export function Expenses() {
 
       {tab === 'compartidos' ? (
         <>
-          <div className="px-4 py-3 flex gap-2">
+          {/* Tipo filter chips */}
+          <div className="px-4 pt-3 flex gap-2">
             {SHARED_FILTERS.map(f => (
               <button key={f.value} onClick={() => setSharedFilter(f.value)}
                 className={['px-3 py-1.5 rounded-xl text-sm font-medium transition-colors', sharedFilter === f.value ? 'bg-zinc-900 text-white' : 'bg-white text-zinc-500 border border-zinc-200'].join(' ')}>
@@ -102,14 +138,25 @@ export function Expenses() {
               </button>
             ))}
           </div>
-          <div className="px-4 flex flex-col gap-5">
+
+          {/* Member + month selects */}
+          <div className="px-4 pt-2 pb-1 flex gap-2">
+            <div className="flex-1">
+              <Select options={memberFilterOptions} value={filterMemberId} onChange={e => setFilterMemberId(e.target.value)} />
+            </div>
+            <div className="flex-1">
+              <Select options={sharedMonthOptions} value={filterMonth} onChange={e => setFilterMonth(e.target.value)} />
+            </div>
+          </div>
+
+          <div className="px-4 pt-3 flex flex-col gap-5">
             {loadingShared ? (
               <div className="bg-white rounded-2xl border border-zinc-200/60 overflow-hidden">
                 {Array.from({ length: 5 }).map((_, i) => <ExpenseItemSkeleton key={i} />)}
               </div>
             ) : groupedShared.length === 0 ? (
               <div className="py-16 flex flex-col items-center gap-2">
-                <p className="text-zinc-400 text-sm">Sin gastos en esta categoría</p>
+                <p className="text-zinc-400 text-sm">Sin gastos para este filtro</p>
               </div>
             ) : (
               <AnimatePresence mode="wait">
@@ -122,8 +169,8 @@ export function Expenses() {
         </>
       ) : (
         <>
-          {/* Member selector + add button */}
-          <div className="px-4 py-3 flex items-end gap-2">
+          {/* Member selector + month filter + add button */}
+          <div className="px-4 pt-3 flex gap-2">
             <div className="flex-1">
               {memberOptions.length > 0
                 ? <Select label="Miembro" options={memberOptions} value={selectedMemberId} onChange={e => setSelectedMemberId(e.target.value)} />
@@ -133,14 +180,21 @@ export function Expenses() {
             {selectedMemberId && (
               <button
                 onClick={() => navigate(`/personal/new?member=${selectedMemberId}`)}
-                className="h-10 px-3 flex items-center gap-1.5 rounded-xl bg-emerald-600 text-white text-sm font-medium shrink-0"
+                className="h-10 mt-auto px-3 flex items-center gap-1.5 rounded-xl bg-emerald-600 text-white text-sm font-medium shrink-0"
               >
                 <Plus size={16} weight="bold" /> Agregar
               </button>
             )}
           </div>
 
-          <div className="px-4 flex flex-col gap-5">
+          {/* Month filter for personal */}
+          {personalExpenses.length > 0 && (
+            <div className="px-4 pt-2 pb-1">
+              <Select options={personalMonthOptions} value={filterMonth} onChange={e => setFilterMonth(e.target.value)} />
+            </div>
+          )}
+
+          <div className="px-4 pt-3 flex flex-col gap-5">
             {!selectedMemberId ? (
               <div className="py-16 flex flex-col items-center gap-3">
                 <UserPlus size={32} className="text-zinc-300" />
@@ -152,7 +206,9 @@ export function Expenses() {
               </div>
             ) : groupedPersonal.length === 0 ? (
               <div className="py-16 flex flex-col items-center gap-2">
-                <p className="text-zinc-400 text-sm">Sin gastos personales todavía</p>
+                <p className="text-zinc-400 text-sm">
+                  {filterMonth ? 'Sin gastos en este mes' : 'Sin gastos personales todavía'}
+                </p>
               </div>
             ) : (
               <AnimatePresence mode="wait">
@@ -175,9 +231,7 @@ function SharedGroup({ monthKey, items, members }: { monthKey: string; items: Ex
       transition={{ type: 'spring', stiffness: 300, damping: 30 }}
     >
       <div className="flex items-center justify-between mb-2">
-        <h3 className="text-sm font-semibold text-zinc-500 capitalize">
-          {format(new Date(monthKey + '-01'), 'MMMM yyyy', { locale: es })}
-        </h3>
+        <h3 className="text-sm font-semibold text-zinc-500 capitalize">{monthLabel(monthKey)}</h3>
         <span className="text-xs text-zinc-400">{items.length} gastos</span>
       </div>
       <div className="bg-white rounded-2xl border border-zinc-200/60 overflow-hidden">
@@ -214,9 +268,7 @@ function PersonalGroup({ monthKey, items }: { monthKey: string; items: PersonalE
       transition={{ type: 'spring', stiffness: 300, damping: 30 }}
     >
       <div className="flex items-center justify-between mb-2">
-        <h3 className="text-sm font-semibold text-zinc-500 capitalize">
-          {format(new Date(monthKey + '-01'), 'MMMM yyyy', { locale: es })}
-        </h3>
+        <h3 className="text-sm font-semibold text-zinc-500 capitalize">{monthLabel(monthKey)}</h3>
         <span className="text-xs text-zinc-400">{items.length} gastos</span>
       </div>
       <div className="bg-white rounded-2xl border border-zinc-200/60 overflow-hidden">
