@@ -90,6 +90,32 @@ export interface SplitPreview {
   is_excluded: boolean
 }
 
+export interface PersonalExpense {
+  id: string
+  member_id: string
+  description: string
+  amount: number
+  currency: Currency
+  category: ExpenseCategory
+  date: string
+  is_recurring: boolean
+  recurrence_type: RecurrenceType | null
+  notes: string | null
+  created_at: string
+}
+
+export interface NewPersonalExpensePayload {
+  member_id: string
+  description: string
+  amount: number
+  currency: Currency
+  category: ExpenseCategory
+  date: string
+  is_recurring: boolean
+  recurrence_type: RecurrenceType | null
+  notes: string
+}
+
 export interface NewExpensePayload {
   description: string
   amount: number

@@ -28,6 +28,8 @@ export const QUERY_KEYS = {
   BALANCE: ['balance'] as const,
   EXCHANGE_RATE: ['exchange_rate'] as const,
   SETTLEMENTS: ['settlements'] as const,
+  PERSONAL_EXPENSES: ['personal_expenses'] as const,
+  PERSONAL_EXPENSE: (id: string) => ['personal_expenses', id] as const,
 }
 
 export const STALE_TIMES = {
