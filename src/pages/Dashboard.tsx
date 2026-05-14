@@ -79,6 +79,7 @@ export function Dashboard() {
           <SummaryCard
             label={recentTab === 'personal' ? 'Gastos personales' : 'Gastos este mes'}
             value={formatCurrency(thisMonthTotal, 'ARS')}
+            valueUsd={rate > 0 ? `~ ${formatCurrency(thisMonthTotal / rate, 'USD')}` : undefined}
             sub={`${(recentTab === 'personal' ? personalExpenses : expenses).filter(e => { const d = new Date(e.date); const n = new Date(); return d.getMonth() === n.getMonth() && d.getFullYear() === n.getFullYear() }).length} gastos`}
           />
           <SummaryCard
@@ -249,7 +250,7 @@ export function Dashboard() {
   )
 }
 
-function SummaryCard({ label, value, sub, positive }: { label: string; value: string; sub: string; positive?: boolean }) {
+function SummaryCard({ label, value, valueUsd, sub, positive }: { label: string; value: string; valueUsd?: string; sub: string; positive?: boolean }) {
   const Icon = positive === undefined ? Minus : positive ? TrendUp : TrendDown
   const iconColor = positive === undefined ? 'text-zinc-400' : positive ? 'text-emerald-500' : 'text-rose-500'
   return (
@@ -260,6 +261,7 @@ function SummaryCard({ label, value, sub, positive }: { label: string; value: st
       </div>
       <div>
         <p className="text-lg font-bold text-zinc-900 tracking-tight leading-none">{value}</p>
+        {valueUsd && <p className="text-xs text-zinc-400 mt-0.5">{valueUsd}</p>}
         <p className="text-xs text-zinc-400 mt-1 truncate">{sub}</p>
       </div>
     </div>
