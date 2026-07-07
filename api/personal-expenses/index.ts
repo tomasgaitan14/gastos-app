@@ -1,12 +1,19 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { readRows, appendRow } from '../_lib/sheets.js'
 import { rowToPersonalExpense, personalExpenseToRow } from '../_lib/mappers.js'
+import { resolveTenantSheetId } from '../_lib/tenants.js'
 import type { PersonalExpense, NewPersonalExpensePayload } from '../../src/types/index.js'
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  const tenantId = req.query.tenantId as string | undefined
+  if (!tenantId) return res.status(400).json({ error: 'tenantId requerido' })
+  let sheetId: string
+  try { sheetId = await resolveTenantSheetId(tenantId) }
+  catch { return res.status(404).json({ error: 'Tenant no encontrado' }) }
+
   if (req.method === 'GET') {
     const { member_id } = req.query as { member_id?: string }
-    const rows = await readRows('personal_expenses')
+    const rows = await readRows(sheetId, 'personal_expenses')
     let expenses = rows.map(rowToPersonalExpense)
     if (member_id) {
       expenses = expenses.filter(e => e.member_id === member_id)
@@ -31,7 +38,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       notes: payload.notes || null,
       created_at: now,
     }
-    await appendRow('personal_expenses', personalExpenseToRow(expense))
+    await appendRow(sheetId, 'personal_expenses', personalExpenseToRow(expense))
     return res.status(201).json(expense)
   }
 

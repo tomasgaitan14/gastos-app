@@ -2,15 +2,20 @@ import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { readRows, findRow, findRows, updateRow, deleteRows, appendRow } from '../_lib/sheets.js'
 import { rowToExpense, expenseToRow, rowToSplit, rowToMember, splitToRow } from '../_lib/mappers.js'
 import { calculateSplits } from '../_lib/calculations.js'
+import { resolveTenantSheetId } from '../_lib/tenants.js'
 import type { Expense, ExpenseSplit, ExpenseWithSplits, NewExpensePayload } from '../../src/types/index.js'
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  const { id } = req.query as { id: string }
+  const { id, tenantId: tenantIdParam } = req.query as { id: string; tenantId?: string }
+  if (!tenantIdParam) return res.status(400).json({ error: 'tenantId requerido' })
+  let sheetId: string
+  try { sheetId = await resolveTenantSheetId(tenantIdParam) }
+  catch { return res.status(404).json({ error: 'Tenant no encontrado' }) }
 
   if (req.method === 'GET') {
     const [found, splitRows] = await Promise.all([
-      findRow('expenses', 0, id),
-      findRows('expense_splits', 1, id),
+      findRow(sheetId, 'expenses', 0, id),
+      findRows(sheetId, 'expense_splits', 1, id),
     ])
     if (!found) return res.status(404).json({ error: 'Expense not found' })
     const expense = rowToExpense(found.row)
@@ -21,7 +26,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'PUT') {
     const { payload, exchangeRate } = req.body as { payload: NewExpensePayload; exchangeRate: number }
 
-    const found = await findRow('expenses', 0, id)
+    const found = await findRow(sheetId, 'expenses', 0, id)
     if (!found) return res.status(404).json({ error: 'Expense not found' })
 
     const existing = rowToExpense(found.row)
@@ -38,13 +43,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       notes: payload.notes || null,
       updated_at: new Date().toISOString(),
     }
-    await updateRow('expenses', found.rowNumber, expenseToRow(updated))
+    await updateRow(sheetId, 'expenses', found.rowNumber, expenseToRow(updated))
 
     // Borrar splits existentes y recalcular
-    const oldSplits = await findRows('expense_splits', 1, id)
-    await deleteRows('expense_splits', oldSplits.map(r => r.rowNumber))
+    const oldSplits = await findRows(sheetId, 'expense_splits', 1, id)
+    await deleteRows(sheetId, 'expense_splits', oldSplits.map(r => r.rowNumber))
 
-    const memberRows = await readRows('members')
+    const memberRows = await readRows(sheetId, 'members')
     const members = memberRows.map(rowToMember)
     const splits = calculateSplits(payload.amount, members, payload.excluded_member_ids, exchangeRate)
     const newSplits: ExpenseSplit[] = splits.map(s => ({
@@ -56,7 +61,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       is_excluded: s.is_excluded,
     }))
     for (const split of newSplits) {
-      await appendRow('expense_splits', splitToRow(split))
+      await appendRow(sheetId, 'expense_splits', splitToRow(split))
     }
 
     return res.status(200).json({ ...updated, splits: newSplits })
@@ -64,14 +69,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   if (req.method === 'DELETE') {
     const [found, splitRows] = await Promise.all([
-      findRow('expenses', 0, id),
-      findRows('expense_splits', 1, id),
+      findRow(sheetId, 'expenses', 0, id),
+      findRows(sheetId, 'expense_splits', 1, id),
     ])
     if (!found) return res.status(404).json({ error: 'Expense not found' })
-    const toDelete = [found.rowNumber, ...splitRows.map(r => r.rowNumber)]
-    // Splits primero para no alterar índices en expenses (tabs distintos, no importa orden)
-    await deleteRows('expense_splits', splitRows.map(r => r.rowNumber))
-    await deleteRows('expenses', [found.rowNumber])
+    await deleteRows(sheetId, 'expense_splits', splitRows.map(r => r.rowNumber))
+    await deleteRows(sheetId, 'expenses', [found.rowNumber])
     return res.status(204).end()
   }
 

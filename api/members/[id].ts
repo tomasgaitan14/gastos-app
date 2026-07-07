@@ -2,15 +2,20 @@ import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { readRows, findRow, updateRow, deleteRows, findRows, replaceAllRows } from '../_lib/sheets.js'
 import { rowToMember, memberToRow, rowToExpense, rowToSplit, splitToRow } from '../_lib/mappers.js'
 import { calculateSplits } from '../_lib/calculations.js'
+import { resolveTenantSheetId } from '../_lib/tenants.js'
 import type { Member } from '../../src/types/index.js'
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  const { id } = req.query as { id: string }
+  const { id, tenantId: tenantIdParam } = req.query as { id: string; tenantId?: string }
+  if (!tenantIdParam) return res.status(400).json({ error: 'tenantId requerido' })
+  let sheetId: string
+  try { sheetId = await resolveTenantSheetId(tenantIdParam) }
+  catch { return res.status(404).json({ error: 'Tenant no encontrado' }) }
 
   if (req.method === 'PUT') {
     const { name, salary, salary_currency } = req.body as Pick<Member, 'name' | 'salary' | 'salary_currency'>
 
-    const found = await findRow('members', 0, id)
+    const found = await findRow(sheetId, 'members', 0, id)
     if (!found) return res.status(404).json({ error: 'Member not found' })
 
     const updatedMember: Member = {
@@ -19,14 +24,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       salary,
       salary_currency,
     }
-    await updateRow('members', found.rowNumber, memberToRow(updatedMember))
+    await updateRow(sheetId, 'members', found.rowNumber, memberToRow(updatedMember))
 
     // Recalcular todos los splits con el salario actualizado
     const [memberRows, expenseRows, splitRows, rateRow] = await Promise.all([
-      readRows('members'),
-      readRows('expenses'),
-      readRows('expense_splits'),
-      readRows('exchange_rates'),
+      readRows(sheetId, 'members'),
+      readRows(sheetId, 'expenses'),
+      readRows(sheetId, 'expense_splits'),
+      readRows(sheetId, 'exchange_rates'),
     ])
 
     const members = memberRows.map(rowToMember)
@@ -50,14 +55,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }))
     })
 
-    await replaceAllRows('expense_splits', newSplits.map(splitToRow))
+    await replaceAllRows(sheetId, 'expense_splits', newSplits.map(splitToRow))
     return res.status(200).json(updatedMember)
   }
 
   if (req.method === 'DELETE') {
-    const found = await findRow('members', 0, id)
+    const found = await findRow(sheetId, 'members', 0, id)
     if (!found) return res.status(404).json({ error: 'Member not found' })
-    await deleteRows('members', [found.rowNumber])
+    await deleteRows(sheetId, 'members', [found.rowNumber])
     return res.status(204).end()
   }
 

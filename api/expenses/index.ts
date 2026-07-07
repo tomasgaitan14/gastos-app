@@ -2,13 +2,20 @@ import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { readRows, appendRow } from '../_lib/sheets.js'
 import { rowToExpense, expenseToRow, rowToSplit, rowToMember, splitToRow } from '../_lib/mappers.js'
 import { calculateSplits } from '../_lib/calculations.js'
+import { resolveTenantSheetId } from '../_lib/tenants.js'
 import type { Expense, ExpenseSplit, ExpenseWithSplits, NewExpensePayload } from '../../src/types/index.js'
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  const tenantId = req.query.tenantId as string | undefined
+  if (!tenantId) return res.status(400).json({ error: 'tenantId requerido' })
+  let sheetId: string
+  try { sheetId = await resolveTenantSheetId(tenantId) }
+  catch { return res.status(404).json({ error: 'Tenant no encontrado' }) }
+
   if (req.method === 'GET') {
     const [expenseRows, splitRows] = await Promise.all([
-      readRows('expenses'),
-      readRows('expense_splits'),
+      readRows(sheetId, 'expenses'),
+      readRows(sheetId, 'expense_splits'),
     ])
     const expenses = expenseRows.map(rowToExpense)
     const allSplits = splitRows.map(rowToSplit)
@@ -45,7 +52,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       updated_at: now,
     }
 
-    const memberRows = await readRows('members')
+    const memberRows = await readRows(sheetId, 'members')
     const members = memberRows.map(rowToMember)
 
     const splits = calculateSplits(payload.amount, members, payload.excluded_member_ids, exchangeRate)
@@ -58,9 +65,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       is_excluded: s.is_excluded,
     }))
 
-    await appendRow('expenses', expenseToRow(expense))
+    await appendRow(sheetId, 'expenses', expenseToRow(expense))
     for (const split of expenseSplits) {
-      await appendRow('expense_splits', splitToRow(split))
+      await appendRow(sheetId, 'expense_splits', splitToRow(split))
     }
 
     return res.status(201).json({ ...expense, splits: expenseSplits })

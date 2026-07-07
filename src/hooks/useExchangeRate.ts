@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { QUERY_KEYS, STALE_TIMES } from '@/constants'
+import { useTenantId } from '@/hooks/useTenantId'
 
 interface ExchangeRateData {
   rate: number
@@ -7,24 +8,23 @@ interface ExchangeRateData {
   updated_at: string | null
 }
 
-async function fetchRate(): Promise<ExchangeRateData> {
-  const res = await fetch('/api/exchange-rate')
-  if (!res.ok) throw new Error('Error al obtener el tipo de cambio')
-  return res.json()
-}
-
 export function useExchangeRate() {
   const queryClient = useQueryClient()
+  const tenantId = useTenantId()
 
   const query = useQuery({
-    queryKey: QUERY_KEYS.EXCHANGE_RATE,
-    queryFn: fetchRate,
+    queryKey: [...QUERY_KEYS.EXCHANGE_RATE, tenantId],
+    queryFn: async (): Promise<ExchangeRateData> => {
+      const res = await fetch(`/api/exchange-rate?tenantId=${tenantId}`)
+      if (!res.ok) throw new Error('Error al obtener el tipo de cambio')
+      return res.json()
+    },
     staleTime: STALE_TIMES.EXCHANGE_RATE,
   })
 
   const refresh = useMutation({
     mutationFn: async () => {
-      const res = await fetch('/api/exchange-rate', {
+      const res = await fetch(`/api/exchange-rate?tenantId=${tenantId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ source: 'api' }),
@@ -32,12 +32,12 @@ export function useExchangeRate() {
       if (!res.ok) throw new Error('Error al actualizar el tipo de cambio')
       return res.json() as Promise<ExchangeRateData>
     },
-    onSuccess: (data) => queryClient.setQueryData(QUERY_KEYS.EXCHANGE_RATE, data),
+    onSuccess: (data) => queryClient.setQueryData([...QUERY_KEYS.EXCHANGE_RATE, tenantId], data),
   })
 
   const setManual = useMutation({
     mutationFn: async (rate: number) => {
-      const res = await fetch('/api/exchange-rate', {
+      const res = await fetch(`/api/exchange-rate?tenantId=${tenantId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ source: 'manual', rate }),
@@ -45,7 +45,7 @@ export function useExchangeRate() {
       if (!res.ok) throw new Error('Error al guardar el tipo de cambio')
       return res.json() as Promise<ExchangeRateData>
     },
-    onSuccess: (data) => queryClient.setQueryData(QUERY_KEYS.EXCHANGE_RATE, data),
+    onSuccess: (data) => queryClient.setQueryData([...QUERY_KEYS.EXCHANGE_RATE, tenantId], data),
   })
 
   return {

@@ -1,12 +1,14 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { QUERY_KEYS, STALE_TIMES } from '@/constants'
+import { useTenantId } from '@/hooks/useTenantId'
 import type { Member, Currency } from '@/types'
 
 export function useMembers() {
+  const tenantId = useTenantId()
   return useQuery({
-    queryKey: QUERY_KEYS.MEMBERS,
+    queryKey: [...QUERY_KEYS.MEMBERS, tenantId],
     queryFn: async (): Promise<Member[]> => {
-      const res = await fetch('/api/members')
+      const res = await fetch(`/api/members?tenantId=${tenantId}`)
       if (!res.ok) throw new Error('Error al cargar miembros')
       return res.json()
     },
@@ -24,9 +26,10 @@ export function useMembersMap() {
 
 export function useAddMember() {
   const queryClient = useQueryClient()
+  const tenantId = useTenantId()
   return useMutation({
     mutationFn: async ({ name, salary, salaryCurrency }: { name: string; salary: number; salaryCurrency: Currency }) => {
-      const res = await fetch('/api/members', {
+      const res = await fetch(`/api/members?tenantId=${tenantId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, salary, salary_currency: salaryCurrency }),
@@ -34,15 +37,16 @@ export function useAddMember() {
       if (!res.ok) throw new Error('Error al agregar miembro')
       return res.json() as Promise<Member>
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: QUERY_KEYS.MEMBERS }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: [...QUERY_KEYS.MEMBERS, tenantId] }),
   })
 }
 
 export function useUpdateMember() {
   const queryClient = useQueryClient()
+  const tenantId = useTenantId()
   return useMutation({
     mutationFn: async ({ id, name, salary, salaryCurrency }: { id: string; name: string; salary: number; salaryCurrency: Currency }) => {
-      const res = await fetch(`/api/members/${id}`, {
+      const res = await fetch(`/api/members/${id}?tenantId=${tenantId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, salary, salary_currency: salaryCurrency }),
@@ -51,23 +55,24 @@ export function useUpdateMember() {
       return res.json() as Promise<Member>
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.MEMBERS })
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.EXPENSES })
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.BALANCE })
+      queryClient.invalidateQueries({ queryKey: [...QUERY_KEYS.MEMBERS, tenantId] })
+      queryClient.invalidateQueries({ queryKey: [...QUERY_KEYS.EXPENSES, tenantId] })
+      queryClient.invalidateQueries({ queryKey: [...QUERY_KEYS.BALANCE, tenantId] })
     },
   })
 }
 
 export function useDeleteMember() {
   const queryClient = useQueryClient()
+  const tenantId = useTenantId()
   return useMutation({
     mutationFn: async (id: string) => {
-      const res = await fetch(`/api/members/${id}`, { method: 'DELETE' })
+      const res = await fetch(`/api/members/${id}?tenantId=${tenantId}`, { method: 'DELETE' })
       if (!res.ok) throw new Error('Error al eliminar miembro')
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.MEMBERS })
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.EXPENSES })
+      queryClient.invalidateQueries({ queryKey: [...QUERY_KEYS.MEMBERS, tenantId] })
+      queryClient.invalidateQueries({ queryKey: [...QUERY_KEYS.EXPENSES, tenantId] })
     },
   })
 }

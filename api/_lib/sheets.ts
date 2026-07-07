@@ -1,7 +1,5 @@
 import { google } from 'googleapis'
 
-const SHEET_ID = process.env.GOOGLE_SHEET_ID!
-
 function getAuth() {
   return new google.auth.GoogleAuth({
     credentials: {
@@ -36,41 +34,41 @@ function toColLetter(count: number): string {
   return result
 }
 
-export async function readRows(tab: string): Promise<string[][]> {
+export async function readRows(sheetId: string, tab: string): Promise<string[][]> {
   const sheets = await getClient()
   const res = await sheets.spreadsheets.values.get({
-    spreadsheetId: SHEET_ID,
+    spreadsheetId: sheetId,
     range: `${tab}!A:ZZ`,
   })
   const rows = (res.data.values ?? []) as string[][]
   return rows.length > 1 ? rows.slice(1) : []
 }
 
-export async function appendRow(tab: string, values: CellValue[]): Promise<void> {
+export async function appendRow(sheetId: string, tab: string, values: CellValue[]): Promise<void> {
   const sheets = await getClient()
   await sheets.spreadsheets.values.append({
-    spreadsheetId: SHEET_ID,
+    spreadsheetId: sheetId,
     range: `${tab}!A:A`,
     valueInputOption: 'RAW',
     requestBody: { values: [values.map(serialize)] },
   })
 }
 
-export async function updateRow(tab: string, rowNumber: number, values: CellValue[]): Promise<void> {
+export async function updateRow(sheetId: string, tab: string, rowNumber: number, values: CellValue[]): Promise<void> {
   const sheets = await getClient()
   const lastCol = toColLetter(values.length)
   await sheets.spreadsheets.values.update({
-    spreadsheetId: SHEET_ID,
+    spreadsheetId: sheetId,
     range: `${tab}!A${rowNumber}:${lastCol}${rowNumber}`,
     valueInputOption: 'RAW',
     requestBody: { values: [values.map(serialize)] },
   })
 }
 
-export async function findRow(tab: string, colIndex: number, value: string): Promise<{ row: string[]; rowNumber: number } | null> {
+export async function findRow(sheetId: string, tab: string, colIndex: number, value: string): Promise<{ row: string[]; rowNumber: number } | null> {
   const sheets = await getClient()
   const res = await sheets.spreadsheets.values.get({
-    spreadsheetId: SHEET_ID,
+    spreadsheetId: sheetId,
     range: `${tab}!A:ZZ`,
   })
   const rows = (res.data.values ?? []) as string[][]
@@ -82,10 +80,10 @@ export async function findRow(tab: string, colIndex: number, value: string): Pro
   return null
 }
 
-export async function findRows(tab: string, colIndex: number, value: string): Promise<{ row: string[]; rowNumber: number }[]> {
+export async function findRows(sheetId: string, tab: string, colIndex: number, value: string): Promise<{ row: string[]; rowNumber: number }[]> {
   const sheets = await getClient()
   const res = await sheets.spreadsheets.values.get({
-    spreadsheetId: SHEET_ID,
+    spreadsheetId: sheetId,
     range: `${tab}!A:ZZ`,
   })
   const rows = (res.data.values ?? []) as string[][]
@@ -98,20 +96,20 @@ export async function findRows(tab: string, colIndex: number, value: string): Pr
   return results
 }
 
-export async function deleteRows(tab: string, rowNumbers: number[]): Promise<void> {
+export async function deleteRows(sheetId: string, tab: string, rowNumbers: number[]): Promise<void> {
   if (rowNumbers.length === 0) return
   const sheets = await getClient()
-  const meta = await sheets.spreadsheets.get({ spreadsheetId: SHEET_ID })
+  const meta = await sheets.spreadsheets.get({ spreadsheetId: sheetId })
   const sheet = meta.data.sheets?.find(s => s.properties?.title === tab)
-  const sheetId = sheet?.properties?.sheetId
-  if (sheetId === undefined) throw new Error(`Tab not found: ${tab}`)
+  const tabSheetId = sheet?.properties?.sheetId
+  if (tabSheetId === undefined) throw new Error(`Tab not found: ${tab}`)
 
   // Eliminar de abajo hacia arriba para no desplazar índices
   const sorted = [...rowNumbers].sort((a, b) => b - a)
   const requests = sorted.map(rowNumber => ({
     deleteDimension: {
       range: {
-        sheetId,
+        sheetId: tabSheetId,
         dimension: 'ROWS' as const,
         startIndex: rowNumber - 1,
         endIndex: rowNumber,
@@ -120,22 +118,21 @@ export async function deleteRows(tab: string, rowNumbers: number[]): Promise<voi
   }))
 
   await sheets.spreadsheets.batchUpdate({
-    spreadsheetId: SHEET_ID,
+    spreadsheetId: sheetId,
     requestBody: { requests },
   })
 }
 
 // Borra todas las filas de datos (deja el header intacto) y las reescribe
-export async function replaceAllRows(tab: string, allValues: CellValue[][]): Promise<void> {
+export async function replaceAllRows(sheetId: string, tab: string, allValues: CellValue[][]): Promise<void> {
   const sheets = await getClient()
-  // Limpiar desde fila 2 en adelante
   await sheets.spreadsheets.values.clear({
-    spreadsheetId: SHEET_ID,
+    spreadsheetId: sheetId,
     range: `${tab}!A2:ZZ`,
   })
   if (allValues.length === 0) return
   await sheets.spreadsheets.values.append({
-    spreadsheetId: SHEET_ID,
+    spreadsheetId: sheetId,
     range: `${tab}!A2`,
     valueInputOption: 'RAW',
     requestBody: { values: allValues.map(row => row.map(serialize)) },
@@ -143,36 +140,36 @@ export async function replaceAllRows(tab: string, allValues: CellValue[][]): Pro
 }
 
 // Lee/escribe una sola fila de datos (para exchange_rates que siempre es 1 fila)
-export async function readSingleDataRow(tab: string): Promise<string[] | null> {
+export async function readSingleDataRow(sheetId: string, tab: string): Promise<string[] | null> {
   const sheets = await getClient()
   const res = await sheets.spreadsheets.values.get({
-    spreadsheetId: SHEET_ID,
+    spreadsheetId: sheetId,
     range: `${tab}!A2:ZZ2`,
   })
   const rows = (res.data.values ?? []) as string[][]
   return rows[0] ?? null
 }
 
-export async function createSheetWithHeaders(name: string, headers: string[]): Promise<void> {
+export async function createSheetWithHeaders(sheetId: string, name: string, headers: string[]): Promise<void> {
   const sheets = await getClient()
   await sheets.spreadsheets.batchUpdate({
-    spreadsheetId: SHEET_ID,
+    spreadsheetId: sheetId,
     requestBody: { requests: [{ addSheet: { properties: { title: name } } }] },
   })
   const lastCol = toColLetter(headers.length)
   await sheets.spreadsheets.values.update({
-    spreadsheetId: SHEET_ID,
+    spreadsheetId: sheetId,
     range: `${name}!A1:${lastCol}1`,
     valueInputOption: 'RAW',
     requestBody: { values: [headers] },
   })
 }
 
-export async function writeSingleDataRow(tab: string, values: CellValue[]): Promise<void> {
+export async function writeSingleDataRow(sheetId: string, tab: string, values: CellValue[]): Promise<void> {
   const sheets = await getClient()
   const lastCol = toColLetter(values.length)
   await sheets.spreadsheets.values.update({
-    spreadsheetId: SHEET_ID,
+    spreadsheetId: sheetId,
     range: `${tab}!A2:${lastCol}2`,
     valueInputOption: 'RAW',
     requestBody: { values: [values.map(serialize)] },

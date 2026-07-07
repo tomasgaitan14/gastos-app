@@ -1,20 +1,25 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { findRow, updateRow, deleteRows } from '../_lib/sheets.js'
 import { rowToPersonalExpense, personalExpenseToRow } from '../_lib/mappers.js'
+import { resolveTenantSheetId } from '../_lib/tenants.js'
 import type { NewPersonalExpensePayload } from '../../src/types/index.js'
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  const { id } = req.query as { id: string }
+  const { id, tenantId: tenantIdParam } = req.query as { id: string; tenantId?: string }
+  if (!tenantIdParam) return res.status(400).json({ error: 'tenantId requerido' })
+  let sheetId: string
+  try { sheetId = await resolveTenantSheetId(tenantIdParam) }
+  catch { return res.status(404).json({ error: 'Tenant no encontrado' }) }
 
   if (req.method === 'GET') {
-    const found = await findRow('personal_expenses', 0, id)
+    const found = await findRow(sheetId, 'personal_expenses', 0, id)
     if (!found) return res.status(404).json({ error: 'Personal expense not found' })
     return res.status(200).json(rowToPersonalExpense(found.row))
   }
 
   if (req.method === 'PUT') {
     const payload = req.body as NewPersonalExpensePayload
-    const found = await findRow('personal_expenses', 0, id)
+    const found = await findRow(sheetId, 'personal_expenses', 0, id)
     if (!found) return res.status(404).json({ error: 'Personal expense not found' })
 
     const existing = rowToPersonalExpense(found.row)
@@ -29,14 +34,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       recurrence_type: payload.recurrence_type,
       notes: payload.notes || null,
     }
-    await updateRow('personal_expenses', found.rowNumber, personalExpenseToRow(updated))
+    await updateRow(sheetId, 'personal_expenses', found.rowNumber, personalExpenseToRow(updated))
     return res.status(200).json(updated)
   }
 
   if (req.method === 'DELETE') {
-    const found = await findRow('personal_expenses', 0, id)
+    const found = await findRow(sheetId, 'personal_expenses', 0, id)
     if (!found) return res.status(404).json({ error: 'Personal expense not found' })
-    await deleteRows('personal_expenses', [found.rowNumber])
+    await deleteRows(sheetId, 'personal_expenses', [found.rowNumber])
     return res.status(204).end()
   }
 

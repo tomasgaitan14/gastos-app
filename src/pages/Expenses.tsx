@@ -15,6 +15,8 @@ import { Badge } from '@/components/ui/Badge'
 import { Select } from '@/components/ui/Select'
 import { ExpenseItemSkeleton } from '@/components/ui/Skeleton'
 import { TopBar } from '@/components/layout/TopBar'
+import { useTenantId } from '@/hooks/useTenantId'
+import { tp } from '@/lib/tenant'
 import type { ExpenseWithSplits, PersonalExpense } from '@/types'
 
 type SharedFilter = 'todos' | 'recurrentes' | 'unicos'
@@ -33,6 +35,7 @@ function monthLabel(key: string) {
 
 export function Expenses() {
   const navigate = useNavigate()
+  const tenantId = useTenantId()
   const [searchParams] = useSearchParams()
 
   const [tab, setTab] = useState<Tab>((searchParams.get('tab') as Tab) ?? 'compartidos')
@@ -208,7 +211,7 @@ export function Expenses() {
                         <div className="flex-1 h-px bg-zinc-200" />
                       </div>
                     )}
-                    <SharedGroup monthKey={key} items={items} members={members} />
+                    <SharedGroup monthKey={key} items={items} members={members} tenantId={tenantId} />
                   </Fragment>
                 ))}
               </AnimatePresence>
@@ -237,7 +240,7 @@ export function Expenses() {
             </div>
             {selectedMemberId && (
               <button
-                onClick={() => navigate(`/personal/new?member=${selectedMemberId}`)}
+                onClick={() => navigate(tp(tenantId, `/personal/new?member=${selectedMemberId}`))}
                 className="h-10 mt-auto px-3 flex items-center gap-1.5 rounded-xl bg-emerald-600 text-white text-sm font-medium shrink-0"
               >
                 <Plus size={16} weight="bold" /> Agregar
@@ -292,7 +295,7 @@ export function Expenses() {
                         <div className="flex-1 h-px bg-zinc-200" />
                       </div>
                     )}
-                    <PersonalGroup monthKey={key} items={items} />
+                    <PersonalGroup monthKey={key} items={items} tenantId={tenantId} />
                   </Fragment>
                 ))}
               </AnimatePresence>
@@ -304,7 +307,7 @@ export function Expenses() {
   )
 }
 
-function SharedGroup({ monthKey, items, members }: { monthKey: string; items: ExpenseWithSplits[]; members: ReturnType<typeof useMembers>['data'] & object[] }) {
+function SharedGroup({ monthKey, items, members, tenantId }: { monthKey: string; items: ExpenseWithSplits[]; members: ReturnType<typeof useMembers>['data'] & object[]; tenantId: string }) {
   const { data: categories = [] } = useCategories()
   const categoryLabel = (id: string) => categories.find(c => c.id === id)?.label ?? id
 
@@ -321,7 +324,7 @@ function SharedGroup({ monthKey, items, members }: { monthKey: string; items: Ex
         {items.map((expense, i) => {
           const payer = members?.find(m => m.id === expense.paid_by)
           return (
-            <Link key={expense.id} to={`/expenses/${expense.id}`}
+            <Link key={expense.id} to={tp(tenantId, `/expenses/${expense.id}`)}
               className={['flex items-center gap-3 px-4 py-3 hover:bg-zinc-50 transition-colors active:bg-zinc-100', i > 0 ? 'border-t border-zinc-100' : ''].join(' ')}>
               <div className="w-10 h-10 bg-zinc-100 rounded-xl flex items-center justify-center text-lg shrink-0">
                 {categoryEmoji(expense.category)}
@@ -345,7 +348,7 @@ function SharedGroup({ monthKey, items, members }: { monthKey: string; items: Ex
   )
 }
 
-function PersonalGroup({ monthKey, items }: { monthKey: string; items: PersonalExpense[] }) {
+function PersonalGroup({ monthKey, items, tenantId }: { monthKey: string; items: PersonalExpense[]; tenantId: string }) {
   const { data: categories = [] } = useCategories()
   const categoryLabel = (id: string) => categories.find(c => c.id === id)?.label ?? id
 
@@ -360,7 +363,7 @@ function PersonalGroup({ monthKey, items }: { monthKey: string; items: PersonalE
       </div>
       <div className="bg-white rounded-2xl border border-zinc-200/60 overflow-hidden">
         {items.map((expense, i) => (
-          <Link key={expense.id} to={`/personal/${expense.id}`}
+          <Link key={expense.id} to={tp(tenantId, `/personal/${expense.id}`)}
             className={['flex items-center gap-3 px-4 py-3 hover:bg-zinc-50 transition-colors active:bg-zinc-100', i > 0 ? 'border-t border-zinc-100' : ''].join(' ')}>
             <div className="w-10 h-10 bg-zinc-100 rounded-xl flex items-center justify-center text-lg shrink-0">
               {categoryEmoji(expense.category)}

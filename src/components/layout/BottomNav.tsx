@@ -2,9 +2,12 @@ import { useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { House, Receipt, Scales, Gear, Plus, Users, User, X } from '@phosphor-icons/react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useTenantId } from '@/hooks/useTenantId'
+import { tp } from '@/lib/tenant'
 
 export function BottomNav() {
   const navigate = useNavigate()
+  const tenantId = useTenantId()
   const [sheetOpen, setSheetOpen] = useState(false)
 
   function handleSelect(path: string) {
@@ -37,7 +40,7 @@ export function BottomNav() {
             >
               <div className="bg-white rounded-2xl border border-zinc-200/60 shadow-xl overflow-hidden">
                 <button
-                  onClick={() => handleSelect('/expenses/new')}
+                  onClick={() => handleSelect(tp(tenantId, '/expenses/new'))}
                   className="w-full flex items-center gap-4 px-5 py-4 hover:bg-zinc-50 active:bg-zinc-100 transition-colors"
                 >
                   <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center shrink-0">
@@ -50,7 +53,7 @@ export function BottomNav() {
                 </button>
                 <div className="border-t border-zinc-100" />
                 <button
-                  onClick={() => handleSelect('/personal/new')}
+                  onClick={() => handleSelect(tp(tenantId, '/personal/new'))}
                   className="w-full flex items-center gap-4 px-5 py-4 hover:bg-zinc-50 active:bg-zinc-100 transition-colors"
                 >
                   <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center shrink-0">
@@ -75,8 +78,8 @@ export function BottomNav() {
 
       <nav className="fixed bottom-0 inset-x-0 z-20 bg-white/90 backdrop-blur-md border-t border-zinc-200/60 safe-bottom">
         <div className="flex items-center justify-around h-16 max-w-lg mx-auto px-2">
-          <NavItem to="/dashboard" icon={<House size={22} weight="fill" />} label="Inicio" />
-          <NavItem to="/expenses" icon={<Receipt size={22} weight="fill" />} label="Gastos" />
+          <NavItem to={tp(tenantId, '/dashboard')} icon={<House size={22} weight="fill" />} label="Inicio" end />
+          <NavItem to={tp(tenantId, '/expenses')} icon={<Receipt size={22} weight="fill" />} label="Gastos" end />
 
           <motion.button
             whileTap={{ scale: 0.92 }}
@@ -89,18 +92,19 @@ export function BottomNav() {
             </motion.div>
           </motion.button>
 
-          <NavItem to="/balance" icon={<Scales size={22} weight="fill" />} label="Balance" />
-          <NavItem to="/settings" icon={<Gear size={22} weight="fill" />} label="Ajustes" />
+          <NavItem to={tp(tenantId, '/balance')} icon={<Scales size={22} weight="fill" />} label="Balance" />
+          <NavItem to={tp(tenantId, '/settings')} icon={<Gear size={22} weight="fill" />} label="Ajustes" />
         </div>
       </nav>
     </>
   )
 }
 
-function NavItem({ to, icon, label }: { to: string; icon: React.ReactNode; label: string }) {
+function NavItem({ to, icon, label, end }: { to: string; icon: React.ReactNode; label: string; end?: boolean }) {
   return (
     <NavLink
       to={to}
+      end={end}
       className={({ isActive }) => [
         'flex flex-col items-center gap-0.5 w-14 py-1 rounded-xl transition-colors',
         isActive ? 'text-emerald-600' : 'text-zinc-400',

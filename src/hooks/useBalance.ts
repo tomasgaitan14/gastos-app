@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { QUERY_KEYS } from '@/constants'
+import { useTenantId } from '@/hooks/useTenantId'
 import { calculateBalances } from '@/lib/calculations'
 import { useMembers, useMembersMap } from './useMembers'
 import { useExpenses } from './useExpenses'
@@ -7,10 +8,11 @@ import { useExchangeRate } from './useExchangeRate'
 import type { Settlement, Currency } from '@/types'
 
 export function useSettlements() {
+  const tenantId = useTenantId()
   return useQuery({
-    queryKey: QUERY_KEYS.SETTLEMENTS,
+    queryKey: [...QUERY_KEYS.SETTLEMENTS, tenantId],
     queryFn: async (): Promise<Settlement[]> => {
-      const res = await fetch('/api/settlements')
+      const res = await fetch(`/api/settlements?tenantId=${tenantId}`)
       if (!res.ok) throw new Error('Error al cargar liquidaciones')
       return res.json()
     },
@@ -30,9 +32,10 @@ export function useBalance() {
 
 export function useCreateSettlement() {
   const queryClient = useQueryClient()
+  const tenantId = useTenantId()
   return useMutation({
     mutationFn: async (payload: { from_user_id: string; to_user_id: string; amount: number; currency: Currency; date: string; notes?: string }) => {
-      const res = await fetch('/api/settlements', {
+      const res = await fetch(`/api/settlements?tenantId=${tenantId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -41,8 +44,8 @@ export function useCreateSettlement() {
       return res.json()
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.SETTLEMENTS })
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.BALANCE })
+      queryClient.invalidateQueries({ queryKey: [...QUERY_KEYS.SETTLEMENTS, tenantId] })
+      queryClient.invalidateQueries({ queryKey: [...QUERY_KEYS.BALANCE, tenantId] })
     },
   })
 }

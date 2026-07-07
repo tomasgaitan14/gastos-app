@@ -1,6 +1,8 @@
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useMembers } from '@/hooks/useMembers'
 import { useCreatePersonalExpense } from '@/hooks/usePersonalExpenses'
+import { useTenantId } from '@/hooks/useTenantId'
+import { tp } from '@/lib/tenant'
 import { PersonalExpenseForm } from '@/components/shared/PersonalExpenseForm'
 import { Select } from '@/components/ui/Select'
 import { TopBar } from '@/components/layout/TopBar'
@@ -9,6 +11,7 @@ import type { NewPersonalExpensePayload } from '@/types'
 
 export function NewPersonalExpense() {
   const navigate = useNavigate()
+  const tenantId = useTenantId()
   const [searchParams] = useSearchParams()
   const { data: members = [] } = useMembers()
   const createExpense = useCreatePersonalExpense()
@@ -19,7 +22,7 @@ export function NewPersonalExpense() {
 
   async function handleSubmit(payload: NewPersonalExpensePayload) {
     await createExpense.mutateAsync({ ...payload, member_id: memberId })
-    navigate('/expenses?tab=personal&member=' + memberId, { replace: true })
+    navigate(tp(tenantId, '/expenses?tab=personal&member=' + memberId), { replace: true })
   }
 
   if (members.length === 0) {

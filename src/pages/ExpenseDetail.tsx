@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import { useTenantId } from '@/hooks/useTenantId'
+import { tp } from '@/lib/tenant'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { Trash, PencilSimple } from '@phosphor-icons/react'
@@ -17,6 +19,7 @@ import { Skeleton } from '@/components/ui/Skeleton'
 export function ExpenseDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const tenantId = useTenantId()
   const { data: expense, isLoading } = useExpense(id!)
   const { data: members = [] } = useMembers()
   const deleteExpense = useDeleteExpense()
@@ -27,7 +30,7 @@ export function ExpenseDetail() {
 
   async function handleDelete() {
     await deleteExpense.mutateAsync(id!)
-    navigate('/expenses', { replace: true })
+    navigate(tp(tenantId, '/expenses'), { replace: true })
   }
 
   if (isLoading) {
@@ -58,7 +61,7 @@ export function ExpenseDetail() {
         back
         right={
           <div className="flex items-center gap-1">
-            <button onClick={() => navigate(`/expenses/${id}/edit`)} className="w-8 h-8 flex items-center justify-center rounded-lg text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100 transition-colors">
+            <button onClick={() => navigate(tp(tenantId, `/expenses/${id}/edit`))} className="w-8 h-8 flex items-center justify-center rounded-lg text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100 transition-colors">
               <PencilSimple size={18} />
             </button>
             <button onClick={() => setConfirmOpen(true)} className="w-8 h-8 flex items-center justify-center rounded-lg text-rose-500 hover:bg-rose-50 transition-colors">

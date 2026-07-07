@@ -14,10 +14,13 @@ import { Badge } from '@/components/ui/Badge'
 import { Select } from '@/components/ui/Select'
 import { TopBar } from '@/components/layout/TopBar'
 import { ExpenseItemSkeleton } from '@/components/ui/Skeleton'
+import { useTenantId } from '@/hooks/useTenantId'
+import { tp } from '@/lib/tenant'
 
 type Tab = 'compartidos' | 'personal'
 
 export function Dashboard() {
+  const tenantId = useTenantId()
   const { data: expenses = [], isLoading: loadingExpenses } = useExpenses()
   const { memberBalances, debts } = useBalance()
   const { rate, updatedAt } = useExchangeRate()
@@ -105,7 +108,7 @@ export function Dashboard() {
         {/* Deudas activas */}
         {debts.length > 0 && (
           <section>
-            <SectionHeader title="Deudas activas" to="/balance" />
+            <SectionHeader title="Deudas activas" to={tp(tenantId, '/balance')} />
             <div className="bg-white rounded-2xl border border-zinc-200/60 overflow-hidden">
               {debts.slice(0, 3).map((debt, i) => (
                 <div key={i} className={['flex items-center gap-3 px-4 py-3', i > 0 ? 'border-t border-zinc-100' : ''].join(' ')}>
@@ -128,7 +131,7 @@ export function Dashboard() {
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-sm font-semibold text-zinc-700">Últimos gastos</h3>
             <Link
-              to={recentTab === 'personal' ? `/expenses?tab=personal&member=${selectedMemberId}` : '/expenses'}
+              to={recentTab === 'personal' ? tp(tenantId, `/expenses?tab=personal&member=${selectedMemberId}`) : tp(tenantId, '/expenses')}
               className="flex items-center gap-1 text-xs text-emerald-600 font-medium"
             >
               Ver todo <ArrowRight size={12} />
@@ -160,7 +163,7 @@ export function Dashboard() {
                 {recentExpenses.map((expense, i) => {
                   const payer = members.find(m => m.id === expense.paid_by)
                   return (
-                    <Link key={expense.id} to={`/expenses/${expense.id}`}
+                    <Link key={expense.id} to={tp(tenantId, `/expenses/${expense.id}`)}
                       className={['flex items-center gap-3 px-4 py-3 hover:bg-zinc-50 transition-colors', i > 0 ? 'border-t border-zinc-100' : ''].join(' ')}>
                       <div className="w-10 h-10 bg-zinc-100 rounded-xl flex items-center justify-center text-lg shrink-0">
                         {categoryEmoji(expense.category)}
@@ -203,7 +206,7 @@ export function Dashboard() {
               ) : (
                 <div className="bg-white rounded-2xl border border-zinc-200/60 overflow-hidden">
                   {recentPersonal.map((expense, i) => (
-                    <Link key={expense.id} to={`/personal/${expense.id}`}
+                    <Link key={expense.id} to={tp(tenantId, `/personal/${expense.id}`)}
                       className={['flex items-center gap-3 px-4 py-3 hover:bg-zinc-50 transition-colors', i > 0 ? 'border-t border-zinc-100' : ''].join(' ')}>
                       <div className="w-10 h-10 bg-zinc-100 rounded-xl flex items-center justify-center text-lg shrink-0">
                         {categoryEmoji(expense.category)}
@@ -229,7 +232,7 @@ export function Dashboard() {
         {/* Balance neto rápido */}
         {memberBalances.length > 0 && (
           <section>
-            <SectionHeader title="Balance rápido" to="/balance" />
+            <SectionHeader title="Balance rápido" to={tp(tenantId, '/balance')} />
             <div className="bg-white rounded-2xl border border-zinc-200/60 overflow-hidden">
               {memberBalances.map((b, i) => (
                 <div key={b.member_id} className={['flex items-center gap-3 px-4 py-3', i > 0 ? 'border-t border-zinc-100' : ''].join(' ')}>

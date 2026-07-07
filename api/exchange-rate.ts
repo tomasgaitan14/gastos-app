@@ -1,11 +1,18 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { readSingleDataRow, writeSingleDataRow } from './_lib/sheets.js'
+import { resolveTenantSheetId } from './_lib/tenants.js'
 
 const DOLAR_API_URL = 'https://dolarapi.com/v1/dolares/cripto'
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  const tenantId = req.query.tenantId as string | undefined
+  if (!tenantId) return res.status(400).json({ error: 'tenantId requerido' })
+  let sheetId: string
+  try { sheetId = await resolveTenantSheetId(tenantId) }
+  catch { return res.status(404).json({ error: 'Tenant no encontrado' }) }
+
   if (req.method === 'GET') {
-    const row = await readSingleDataRow('exchange_rates')
+    const row = await readSingleDataRow(sheetId, 'exchange_rates')
     if (!row || !row[0]) {
       return res.status(200).json({ rate: 0, source: null, updated_at: null })
     }
@@ -32,7 +39,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     const now = new Date().toISOString()
-    await writeSingleDataRow('exchange_rates', [rate, source, now])
+    await writeSingleDataRow(sheetId, 'exchange_rates', [rate, source, now])
     return res.status(200).json({ rate, source, updated_at: now })
   }
 

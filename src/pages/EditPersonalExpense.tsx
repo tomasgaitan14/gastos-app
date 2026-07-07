@@ -1,5 +1,7 @@
 import { useParams, useNavigate } from 'react-router-dom'
 import { usePersonalExpense, useUpdatePersonalExpense } from '@/hooks/usePersonalExpenses'
+import { useTenantId } from '@/hooks/useTenantId'
+import { tp } from '@/lib/tenant'
 import { PersonalExpenseForm } from '@/components/shared/PersonalExpenseForm'
 import { TopBar } from '@/components/layout/TopBar'
 import { Skeleton } from '@/components/ui/Skeleton'
@@ -8,12 +10,13 @@ import type { NewPersonalExpensePayload } from '@/types'
 export function EditPersonalExpense() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const tenantId = useTenantId()
   const { data: expense, isLoading } = usePersonalExpense(id!)
   const updateExpense = useUpdatePersonalExpense()
 
   async function handleSubmit(payload: NewPersonalExpensePayload) {
     await updateExpense.mutateAsync({ id: id!, payload })
-    navigate(`/personal/${id}`, { replace: true })
+    navigate(tp(tenantId, `/personal/${id}`), { replace: true })
   }
 
   if (isLoading) {

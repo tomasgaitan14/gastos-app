@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { BottomNav } from '@/components/layout/BottomNav'
+import { TenantLayout } from '@/components/layout/TenantLayout'
 import { Dashboard } from '@/pages/Dashboard'
 import { Expenses } from '@/pages/Expenses'
 import { NewExpense } from '@/pages/NewExpense'
@@ -16,24 +16,37 @@ const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, refetchOnWindowFocus: false } },
 })
 
+function Home() {
+  return (
+    <div className="min-h-screen flex items-center justify-center px-6">
+      <div className="text-center">
+        <h1 className="text-xl font-semibold text-zinc-900 mb-2">Gastos App</h1>
+        <p className="text-sm text-zinc-400">Usá el link que te compartieron para acceder.</p>
+      </div>
+    </div>
+  )
+}
+
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <Routes>
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/expenses" element={<Expenses />} />
-          <Route path="/expenses/new" element={<NewExpense />} />
-          <Route path="/expenses/:id" element={<ExpenseDetail />} />
-          <Route path="/expenses/:id/edit" element={<EditExpense />} />
-          <Route path="/personal/new" element={<NewPersonalExpense />} />
-          <Route path="/personal/:id" element={<PersonalExpenseDetail />} />
-          <Route path="/personal/:id/edit" element={<EditPersonalExpense />} />
-          <Route path="/balance" element={<Balance />} />
-          <Route path="/settings" element={<Settings />} />
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/" element={<Home />} />
+          <Route path="/t/:tenantId" element={<TenantLayout />}>
+            <Route path="dashboard" element={<Dashboard />} />
+            <Route path="expenses" element={<Expenses />} />
+            <Route path="expenses/new" element={<NewExpense />} />
+            <Route path="expenses/:id" element={<ExpenseDetail />} />
+            <Route path="expenses/:id/edit" element={<EditExpense />} />
+            <Route path="personal/new" element={<NewPersonalExpense />} />
+            <Route path="personal/:id" element={<PersonalExpenseDetail />} />
+            <Route path="personal/:id/edit" element={<EditPersonalExpense />} />
+            <Route path="balance" element={<Balance />} />
+            <Route path="settings" element={<Settings />} />
+            <Route path="*" element={<Navigate to="dashboard" replace />} />
+          </Route>
         </Routes>
-        <BottomNav />
       </BrowserRouter>
     </QueryClientProvider>
   )
