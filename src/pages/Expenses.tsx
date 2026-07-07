@@ -37,6 +37,7 @@ export function Expenses() {
 
   const [tab, setTab] = useState<Tab>((searchParams.get('tab') as Tab) ?? 'compartidos')
   const [sharedFilter, setSharedFilter] = useState<SharedFilter>('todos')
+  const [personalFilter, setPersonalFilter] = useState<SharedFilter>('todos')
   const [filterMemberId, setFilterMemberId] = useState('')
   const [filterMonth, setFilterMonth] = useState('')
   const [filterCategory, setFilterCategory] = useState('')
@@ -57,8 +58,8 @@ export function Expenses() {
     tab === 'personal' ? selectedMemberId : null
   )
 
-  // Reset month + category filters when switching tabs
-  useEffect(() => { setFilterMonth(''); setFilterCategory('') }, [tab])
+  // Reset filters when switching tabs
+  useEffect(() => { setFilterMonth(''); setFilterCategory(''); setPersonalFilter('todos') }, [tab])
 
   // Shared: available months (from all expenses, before month filter)
   const sharedMonthOptions = useMemo(() => {
@@ -104,13 +105,15 @@ export function Expenses() {
     return Object.entries(groups).sort((a, b) => b[0].localeCompare(a[0]))
   }, [filteredShared])
 
-  // Personal expenses: apply month + category filters
+  // Personal expenses: apply all filters
   const filteredPersonal = useMemo(() => {
     let list = personalExpenses
+    if (personalFilter === 'recurrentes') list = list.filter(e => e.is_recurring)
+    else if (personalFilter === 'unicos') list = list.filter(e => !e.is_recurring)
     if (filterMonth) list = list.filter(e => e.date.slice(0, 7) === filterMonth)
     if (filterCategory) list = list.filter(e => e.category === filterCategory)
     return list
-  }, [personalExpenses, filterMonth, filterCategory])
+  }, [personalExpenses, personalFilter, filterMonth, filterCategory])
 
   const groupedPersonal = useMemo(() => {
     const groups: Record<string, PersonalExpense[]> = {}
@@ -214,8 +217,18 @@ export function Expenses() {
         </>
       ) : (
         <>
-          {/* Member selector + month filter + add button */}
+          {/* Tipo filter chips */}
           <div className="px-4 pt-3 flex gap-2">
+            {SHARED_FILTERS.map(f => (
+              <button key={f.value} onClick={() => setPersonalFilter(f.value)}
+                className={['px-3 py-1.5 rounded-xl text-sm font-medium transition-colors', personalFilter === f.value ? 'bg-zinc-900 text-white' : 'bg-white text-zinc-500 border border-zinc-200'].join(' ')}>
+                {f.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Member selector + month filter + add button */}
+          <div className="px-4 pt-2 flex gap-2">
             <div className="flex-1">
               {memberOptions.length > 0
                 ? <Select label="Miembro" options={memberOptions} value={selectedMemberId} onChange={e => setSelectedMemberId(e.target.value)} />
