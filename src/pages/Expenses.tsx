@@ -305,6 +305,9 @@ export function Expenses() {
 }
 
 function SharedGroup({ monthKey, items, members }: { monthKey: string; items: ExpenseWithSplits[]; members: ReturnType<typeof useMembers>['data'] & object[] }) {
+  const { data: categories = [] } = useCategories()
+  const categoryLabel = (id: string) => categories.find(c => c.id === id)?.label ?? id
+
   return (
     <motion.section
       initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
@@ -325,10 +328,11 @@ function SharedGroup({ monthKey, items, members }: { monthKey: string; items: Ex
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-zinc-900 truncate">{expense.description}</p>
-                <div className="flex items-center gap-2 mt-0.5">
+                <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                   {payer && <span className="text-xs text-zinc-400">{payer.name.split(' ')[0]}</span>}
                   <span className="text-xs text-zinc-300">·</span>
                   <span className="text-xs text-zinc-400">{format(new Date(expense.date + 'T00:00:00'), 'd MMM', { locale: es })}</span>
+                  <Badge variant="default">{categoryLabel(expense.category)}</Badge>
                   {expense.is_recurring && <Badge variant="neutral">{RECURRENCE_LABELS[expense.recurrence_type!]}</Badge>}
                 </div>
               </div>
@@ -342,6 +346,9 @@ function SharedGroup({ monthKey, items, members }: { monthKey: string; items: Ex
 }
 
 function PersonalGroup({ monthKey, items }: { monthKey: string; items: PersonalExpense[] }) {
+  const { data: categories = [] } = useCategories()
+  const categoryLabel = (id: string) => categories.find(c => c.id === id)?.label ?? id
+
   return (
     <motion.section
       initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
@@ -360,8 +367,9 @@ function PersonalGroup({ monthKey, items }: { monthKey: string; items: PersonalE
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-zinc-900 truncate">{expense.description}</p>
-              <div className="flex items-center gap-2 mt-0.5">
+              <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                 <span className="text-xs text-zinc-400">{format(new Date(expense.date + 'T00:00:00'), 'd MMM', { locale: es })}</span>
+                <Badge variant="default">{categoryLabel(expense.category)}</Badge>
                 {expense.is_recurring && <Badge variant="neutral">{RECURRENCE_LABELS[expense.recurrence_type!]}</Badge>}
               </div>
             </div>
