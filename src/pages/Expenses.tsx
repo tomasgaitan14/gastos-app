@@ -8,6 +8,7 @@ import { useExpenses } from '@/hooks/useExpenses'
 import { useMembers } from '@/hooks/useMembers'
 import { usePersonalExpenses } from '@/hooks/usePersonalExpenses'
 import { useExchangeRate } from '@/hooks/useExchangeRate'
+import { useCategories } from '@/hooks/useCategories'
 import { formatCurrency } from '@/lib/calculations'
 import { RECURRENCE_LABELS } from '@/constants'
 import { Badge } from '@/components/ui/Badge'
@@ -38,9 +39,11 @@ export function Expenses() {
   const [sharedFilter, setSharedFilter] = useState<SharedFilter>('todos')
   const [filterMemberId, setFilterMemberId] = useState('')
   const [filterMonth, setFilterMonth] = useState('')
+  const [filterCategory, setFilterCategory] = useState('')
 
   const { data: expenses = [], isLoading: loadingShared } = useExpenses()
   const { data: members = [] } = useMembers()
+  const { data: categories = [] } = useCategories()
 
   const [selectedMemberId, setSelectedMemberId] = useState(
     searchParams.get('member') ?? members[0]?.id ?? ''
@@ -54,8 +57,8 @@ export function Expenses() {
     tab === 'personal' ? selectedMemberId : null
   )
 
-  // Reset month filter when switching tabs
-  useEffect(() => { setFilterMonth('') }, [tab])
+  // Reset month + category filters when switching tabs
+  useEffect(() => { setFilterMonth(''); setFilterCategory('') }, [tab])
 
   // Shared: available months (from all expenses, before month filter)
   const sharedMonthOptions = useMemo(() => {
@@ -75,6 +78,11 @@ export function Expenses() {
     ...members.map(m => ({ value: m.id, label: m.name })),
   ], [members])
 
+  const categoryFilterOptions = useMemo(() => [
+    { value: '', label: 'Todas las categorías' },
+    ...categories.map(c => ({ value: c.id, label: c.label })),
+  ], [categories])
+
   // Shared expenses: apply all filters
   const filteredShared = useMemo(() => {
     let list = expenses
@@ -82,8 +90,9 @@ export function Expenses() {
     if (sharedFilter === 'recurrentes') list = list.filter(e => e.is_recurring)
     else if (sharedFilter === 'unicos') list = list.filter(e => !e.is_recurring)
     if (filterMonth) list = list.filter(e => e.date.slice(0, 7) === filterMonth)
+    if (filterCategory) list = list.filter(e => e.category === filterCategory)
     return list
-  }, [expenses, filterMemberId, sharedFilter, filterMonth])
+  }, [expenses, filterMemberId, sharedFilter, filterMonth, filterCategory])
 
   const groupedShared = useMemo(() => {
     const groups: Record<string, ExpenseWithSplits[]> = {}
@@ -95,11 +104,13 @@ export function Expenses() {
     return Object.entries(groups).sort((a, b) => b[0].localeCompare(a[0]))
   }, [filteredShared])
 
-  // Personal expenses: apply month filter
+  // Personal expenses: apply month + category filters
   const filteredPersonal = useMemo(() => {
-    if (!filterMonth) return personalExpenses
-    return personalExpenses.filter(e => e.date.slice(0, 7) === filterMonth)
-  }, [personalExpenses, filterMonth])
+    let list = personalExpenses
+    if (filterMonth) list = list.filter(e => e.date.slice(0, 7) === filterMonth)
+    if (filterCategory) list = list.filter(e => e.category === filterCategory)
+    return list
+  }, [personalExpenses, filterMonth, filterCategory])
 
   const groupedPersonal = useMemo(() => {
     const groups: Record<string, PersonalExpense[]> = {}
@@ -161,6 +172,11 @@ export function Expenses() {
             </div>
           </div>
 
+          {/* Category filter */}
+          <div className="px-4 pb-1">
+            <Select options={categoryFilterOptions} value={filterCategory} onChange={e => setFilterCategory(e.target.value)} />
+          </div>
+
           {!loadingShared && filteredShared.length > 0 && (
             <div className="px-4 pt-2 flex items-center justify-between">
               <span className="text-xs text-zinc-400">{filteredShared.length} gastos</span>
@@ -216,10 +232,15 @@ export function Expenses() {
             )}
           </div>
 
-          {/* Month filter for personal */}
+          {/* Month + category filters for personal */}
           {personalExpenses.length > 0 && (
-            <div className="px-4 pt-2 pb-1">
-              <Select options={personalMonthOptions} value={filterMonth} onChange={e => setFilterMonth(e.target.value)} />
+            <div className="px-4 pt-2 pb-1 flex gap-2">
+              <div className="flex-1">
+                <Select options={personalMonthOptions} value={filterMonth} onChange={e => setFilterMonth(e.target.value)} />
+              </div>
+              <div className="flex-1">
+                <Select options={categoryFilterOptions} value={filterCategory} onChange={e => setFilterCategory(e.target.value)} />
+              </div>
             </div>
           )}
 
