@@ -1,15 +1,4 @@
-import type { ExpenseCategory, RecurrenceType, Currency } from '@/types'
-
-export const CATEGORIES: Record<ExpenseCategory, string> = {
-  alquiler: 'Alquiler',
-  servicios: 'Servicios',
-  supermercado: 'Supermercado',
-  salidas: 'Salidas',
-  salud: 'Salud',
-  transporte: 'Transporte',
-  entretenimiento: 'Entretenimiento',
-  otros: 'Otros',
-}
+import type { RecurrenceType, Currency } from '@/types'
 
 export const RECURRENCE_LABELS: Record<RecurrenceType, string> = {
   weekly: 'Semanal',
@@ -30,10 +19,12 @@ export const QUERY_KEYS = {
   SETTLEMENTS: ['settlements'] as const,
   PERSONAL_EXPENSES: ['personal_expenses'] as const,
   PERSONAL_EXPENSE: (id: string) => ['personal_expenses', id] as const,
+  CATEGORIES: ['categories'] as const,
 }
 
 export const STALE_TIMES = {
   EXCHANGE_RATE: 1000 * 60 * 30, // 30 minutos
   MEMBERS: 1000 * 60 * 5,
   EXPENSES: 1000 * 60 * 2,
+  CATEGORIES: 1000 * 60 * 60, // 1 hora
 }

@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, Fragment } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
@@ -26,7 +26,8 @@ const SHARED_FILTERS: { value: SharedFilter; label: string }[] = [
 ]
 
 function monthLabel(key: string) {
-  return format(new Date(key + '-01'), 'MMMM yyyy', { locale: es })
+  const [y, m] = key.split('-').map(Number)
+  return format(new Date(y, m - 1, 1), 'MMMM yyyy', { locale: es })
 }
 
 export function Expenses() {
@@ -58,13 +59,13 @@ export function Expenses() {
 
   // Shared: available months (from all expenses, before month filter)
   const sharedMonthOptions = useMemo(() => {
-    const keys = new Set(expenses.map(e => format(new Date(e.date), 'yyyy-MM')))
+    const keys = new Set(expenses.map(e => e.date.slice(0, 7)))
     return [{ value: '', label: 'Todos los meses' }, ...[...keys].sort((a, b) => b.localeCompare(a)).map(k => ({ value: k, label: monthLabel(k) }))]
   }, [expenses])
 
   // Personal: available months
   const personalMonthOptions = useMemo(() => {
-    const keys = new Set(personalExpenses.map(e => format(new Date(e.date), 'yyyy-MM')))
+    const keys = new Set(personalExpenses.map(e => e.date.slice(0, 7)))
     return [{ value: '', label: 'Todos los meses' }, ...[...keys].sort((a, b) => b.localeCompare(a)).map(k => ({ value: k, label: monthLabel(k) }))]
   }, [personalExpenses])
 
@@ -80,14 +81,14 @@ export function Expenses() {
     if (filterMemberId) list = list.filter(e => e.paid_by === filterMemberId)
     if (sharedFilter === 'recurrentes') list = list.filter(e => e.is_recurring)
     else if (sharedFilter === 'unicos') list = list.filter(e => !e.is_recurring)
-    if (filterMonth) list = list.filter(e => format(new Date(e.date), 'yyyy-MM') === filterMonth)
+    if (filterMonth) list = list.filter(e => e.date.slice(0, 7) === filterMonth)
     return list
   }, [expenses, filterMemberId, sharedFilter, filterMonth])
 
   const groupedShared = useMemo(() => {
     const groups: Record<string, ExpenseWithSplits[]> = {}
     for (const expense of filteredShared) {
-      const key = format(new Date(expense.date), 'yyyy-MM')
+      const key = expense.date.slice(0, 7)
       if (!groups[key]) groups[key] = []
       groups[key].push(expense)
     }
@@ -97,13 +98,13 @@ export function Expenses() {
   // Personal expenses: apply month filter
   const filteredPersonal = useMemo(() => {
     if (!filterMonth) return personalExpenses
-    return personalExpenses.filter(e => format(new Date(e.date), 'yyyy-MM') === filterMonth)
+    return personalExpenses.filter(e => e.date.slice(0, 7) === filterMonth)
   }, [personalExpenses, filterMonth])
 
   const groupedPersonal = useMemo(() => {
     const groups: Record<string, PersonalExpense[]> = {}
     for (const expense of filteredPersonal) {
-      const key = format(new Date(expense.date), 'yyyy-MM')
+      const key = expense.date.slice(0, 7)
       if (!groups[key]) groups[key] = []
       groups[key].push(expense)
     }
@@ -181,8 +182,15 @@ export function Expenses() {
               </div>
             ) : (
               <AnimatePresence mode="wait">
-                {groupedShared.map(([key, items]) => (
-                  <SharedGroup key={key} monthKey={key} items={items} members={members} />
+                {groupedShared.map(([key, items], idx) => (
+                  <Fragment key={key}>
+                    {idx > 0 && !filterMonth && (
+                      <div className="flex items-center gap-3 -my-1">
+                        <div className="flex-1 h-px bg-zinc-200" />
+                      </div>
+                    )}
+                    <SharedGroup monthKey={key} items={items} members={members} />
+                  </Fragment>
                 ))}
               </AnimatePresence>
             )}
@@ -243,8 +251,15 @@ export function Expenses() {
               </div>
             ) : (
               <AnimatePresence mode="wait">
-                {groupedPersonal.map(([key, items]) => (
-                  <PersonalGroup key={key} monthKey={key} items={items} />
+                {groupedPersonal.map(([key, items], idx) => (
+                  <Fragment key={key}>
+                    {idx > 0 && !filterMonth && (
+                      <div className="flex items-center gap-3 -my-1">
+                        <div className="flex-1 h-px bg-zinc-200" />
+                      </div>
+                    )}
+                    <PersonalGroup monthKey={key} items={items} />
+                  </Fragment>
                 ))}
               </AnimatePresence>
             )}
@@ -279,7 +294,7 @@ function SharedGroup({ monthKey, items, members }: { monthKey: string; items: Ex
                 <div className="flex items-center gap-2 mt-0.5">
                   {payer && <span className="text-xs text-zinc-400">{payer.name.split(' ')[0]}</span>}
                   <span className="text-xs text-zinc-300">·</span>
-                  <span className="text-xs text-zinc-400">{format(new Date(expense.date), 'd MMM', { locale: es })}</span>
+                  <span className="text-xs text-zinc-400">{format(new Date(expense.date + 'T00:00:00'), 'd MMM', { locale: es })}</span>
                   {expense.is_recurring && <Badge variant="neutral">{RECURRENCE_LABELS[expense.recurrence_type!]}</Badge>}
                 </div>
               </div>
@@ -312,7 +327,7 @@ function PersonalGroup({ monthKey, items }: { monthKey: string; items: PersonalE
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-zinc-900 truncate">{expense.description}</p>
               <div className="flex items-center gap-2 mt-0.5">
-                <span className="text-xs text-zinc-400">{format(new Date(expense.date), 'd MMM', { locale: es })}</span>
+                <span className="text-xs text-zinc-400">{format(new Date(expense.date + 'T00:00:00'), 'd MMM', { locale: es })}</span>
                 {expense.is_recurring && <Badge variant="neutral">{RECURRENCE_LABELS[expense.recurrence_type!]}</Badge>}
               </div>
             </div>

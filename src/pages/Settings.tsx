@@ -1,40 +1,49 @@
 import { useState } from 'react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { ArrowsClockwise, SignOut, PencilSimple, Trash, UserPlus } from '@phosphor-icons/react'
-import { useAuth } from '@/contexts/AuthContext'
+import { ArrowsClockwise, PencilSimple, Plus, Trash, UserPlus } from '@phosphor-icons/react'
 import { useMembers, useAddMember, useUpdateMember, useDeleteMember } from '@/hooks/useMembers'
 import { useExchangeRate } from '@/hooks/useExchangeRate'
+import { useCategories, useAddCategory, useUpdateCategory, useDeleteCategory } from '@/hooks/useCategories'
 import { formatCurrency } from '@/lib/calculations'
 import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
 import { TopBar } from '@/components/layout/TopBar'
-import type { Currency, Member } from '@/types'
+import type { Category, Currency, Member } from '@/types'
 
 type MemberForm = { name: string; salary: string; currency: Currency }
 const emptyForm = (): MemberForm => ({ name: '', salary: '', currency: 'ARS' })
 
 export function Settings() {
-  const { user, signOut } = useAuth()
   const { data: members = [] } = useMembers()
   const { rate, updatedAt, refresh, setManual } = useExchangeRate()
+  const { data: categories = [] } = useCategories()
   const addMember = useAddMember()
   const updateMember = useUpdateMember()
   const deleteMember = useDeleteMember()
+  const addCategory = useAddCategory()
+  const updateCategory = useUpdateCategory()
+  const deleteCategory = useDeleteCategory()
 
   const [manualRate, setManualRate] = useState('')
 
-  // Modal agregar/editar
   const [modalOpen, setModalOpen] = useState(false)
   const [editingMember, setEditingMember] = useState<Member | null>(null)
   const [form, setForm] = useState<MemberForm>(emptyForm())
   const [formErrors, setFormErrors] = useState<Record<string, string>>({})
 
-  // Modal eliminar
   const [deleteTarget, setDeleteTarget] = useState<Member | null>(null)
   const [deleteError, setDeleteError] = useState('')
+
+  // categorías
+  const [addingCategory, setAddingCategory] = useState(false)
+  const [newCategoryLabel, setNewCategoryLabel] = useState('')
+  const [newCategoryError, setNewCategoryError] = useState('')
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null)
+  const [editCategoryLabel, setEditCategoryLabel] = useState('')
+  const [deleteCategoryTarget, setDeleteCategoryTarget] = useState<Category | null>(null)
 
   function openAdd() {
     setEditingMember(null)
@@ -82,13 +91,8 @@ export function Settings() {
     try {
       await deleteMember.mutateAsync(deleteTarget.id)
       setDeleteTarget(null)
-    } catch (err: unknown) {
-      const code = (err as { code?: string })?.code
-      if (code === '23503') {
-        setDeleteError('Este miembro tiene gastos registrados. Eliminá los gastos primero.')
-      } else {
-        setDeleteError('No se pudo eliminar. Intentá de nuevo.')
-      }
+    } catch {
+      setDeleteError('No se pudo eliminar. Intentá de nuevo.')
     }
   }
 
@@ -98,6 +102,37 @@ export function Settings() {
     if (!num || num <= 0) return
     await setManual.mutateAsync(num)
     setManualRate('')
+  }
+
+  function openEditCategory(cat: Category) {
+    setEditingCategory(cat)
+    setEditCategoryLabel(cat.label)
+  }
+
+  async function handleSaveCategory(e: React.FormEvent) {
+    e.preventDefault()
+    if (!editingCategory || !editCategoryLabel.trim()) return
+    await updateCategory.mutateAsync({ id: editingCategory.id, label: editCategoryLabel.trim() })
+    setEditingCategory(null)
+  }
+
+  async function handleAddCategory(e: React.FormEvent) {
+    e.preventDefault()
+    setNewCategoryError('')
+    if (!newCategoryLabel.trim()) return
+    try {
+      await addCategory.mutateAsync(newCategoryLabel.trim())
+      setNewCategoryLabel('')
+      setAddingCategory(false)
+    } catch (err) {
+      setNewCategoryError(err instanceof Error ? err.message : 'Error al agregar')
+    }
+  }
+
+  async function handleDeleteCategory() {
+    if (!deleteCategoryTarget) return
+    await deleteCategory.mutateAsync(deleteCategoryTarget.id)
+    setDeleteCategoryTarget(null)
   }
 
   const isPending = addMember.isPending || updateMember.isPending
@@ -151,6 +186,73 @@ export function Settings() {
           )}
         </section>
 
+        {/* Categorías */}
+        <section>
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm font-semibold text-zinc-700">Categorías</p>
+            <button
+              onClick={() => { setAddingCategory(true); setNewCategoryLabel(''); setNewCategoryError('') }}
+              className="flex items-center gap-1.5 text-xs font-medium text-emerald-600 hover:text-emerald-700 transition-colors"
+            >
+              <Plus size={14} /> Agregar
+            </button>
+          </div>
+
+          <div className="bg-white rounded-2xl border border-zinc-200/60 overflow-hidden">
+            {categories.map((cat, i) => (
+              <div key={cat.id} className={['flex items-center gap-3 px-4 py-3', i > 0 ? 'border-t border-zinc-100' : ''].join(' ')}>
+                {editingCategory?.id === cat.id ? (
+                  <form onSubmit={handleSaveCategory} className="flex-1 flex items-center gap-2">
+                    <input
+                      autoFocus
+                      value={editCategoryLabel}
+                      onChange={e => setEditCategoryLabel(e.target.value)}
+                      className="flex-1 px-2 py-1 text-sm border border-zinc-200 rounded-lg outline-none focus:border-emerald-500 bg-zinc-50"
+                    />
+                    <button type="submit" disabled={updateCategory.isPending} className="text-xs font-medium text-emerald-600 hover:text-emerald-700 disabled:opacity-50">Guardar</button>
+                    <button type="button" onClick={() => setEditingCategory(null)} className="text-xs text-zinc-400 hover:text-zinc-600">Cancelar</button>
+                  </form>
+                ) : (
+                  <>
+                    <span className="flex-1 text-sm font-medium text-zinc-900">{cat.label}</span>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        onClick={() => openEditCategory(cat)}
+                        className="w-8 h-8 flex items-center justify-center rounded-lg text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100 transition-colors"
+                      >
+                        <PencilSimple size={16} />
+                      </button>
+                      <button
+                        onClick={() => setDeleteCategoryTarget(cat)}
+                        className="w-8 h-8 flex items-center justify-center rounded-lg text-zinc-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                      >
+                        <Trash size={16} />
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            ))}
+
+            {addingCategory && (
+              <div className={['px-4 py-3', categories.length > 0 ? 'border-t border-zinc-100' : ''].join(' ')}>
+                <form onSubmit={handleAddCategory} className="flex items-center gap-2">
+                  <input
+                    autoFocus
+                    value={newCategoryLabel}
+                    onChange={e => { setNewCategoryLabel(e.target.value); setNewCategoryError('') }}
+                    placeholder="Nueva categoría..."
+                    className="flex-1 px-2 py-1 text-sm border border-zinc-200 rounded-lg outline-none focus:border-emerald-500 bg-zinc-50"
+                  />
+                  <button type="submit" disabled={addCategory.isPending} className="text-xs font-medium text-emerald-600 hover:text-emerald-700 disabled:opacity-50">Agregar</button>
+                  <button type="button" onClick={() => { setAddingCategory(false); setNewCategoryError('') }} className="text-xs text-zinc-400 hover:text-zinc-600">Cancelar</button>
+                </form>
+                {newCategoryError && <p className="text-xs text-rose-600 mt-1">{newCategoryError}</p>}
+              </div>
+            )}
+          </div>
+        </section>
+
         {/* Tipo de cambio */}
         <section>
           <p className="text-sm font-semibold text-zinc-700 mb-2">Tipo de cambio (dólar cripto)</p>
@@ -178,18 +280,6 @@ export function Settings() {
             </form>
           </div>
         </section>
-
-        {/* Cuenta */}
-        <section>
-          <p className="text-sm font-semibold text-zinc-700 mb-2">Cuenta</p>
-          <div className="bg-white rounded-2xl border border-zinc-200/60 px-4 py-3">
-            <p className="text-sm text-zinc-500">{user?.email}</p>
-          </div>
-        </section>
-
-        <Button variant="ghost" fullWidth icon={<SignOut size={18} />} onClick={signOut}>
-          Cerrar sesión
-        </Button>
       </div>
 
       {/* Modal agregar / editar miembro */}
@@ -208,6 +298,19 @@ export function Settings() {
             {editingMember ? 'Guardar cambios' : 'Agregar'}
           </Button>
         </form>
+      </Modal>
+
+      {/* Modal confirmar eliminación de categoría */}
+      <Modal open={deleteCategoryTarget !== null} onClose={() => setDeleteCategoryTarget(null)} title="Eliminar categoría">
+        <div className="p-5 flex flex-col gap-4">
+          <p className="text-sm text-zinc-600">
+            ¿Eliminar la categoría <span className="font-medium text-zinc-900">"{deleteCategoryTarget?.label}"</span>? Los gastos que la usan conservarán su referencia pero sin label.
+          </p>
+          <div className="flex gap-2">
+            <Button variant="secondary" fullWidth onClick={() => setDeleteCategoryTarget(null)}>Cancelar</Button>
+            <Button variant="danger" fullWidth loading={deleteCategory.isPending} onClick={handleDeleteCategory}>Eliminar</Button>
+          </div>
+        </div>
       </Modal>
 
       {/* Modal confirmar eliminación */}

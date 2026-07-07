@@ -14,7 +14,7 @@ export function NewExpense() {
   const createExpense = useCreateExpense()
 
   async function handleSubmit(payload: NewExpensePayload) {
-    await createExpense.mutateAsync({ payload, members, exchangeRate: rate })
+    await createExpense.mutateAsync({ payload, exchangeRate: rate })
     navigate('/expenses', { replace: true })
   }
 

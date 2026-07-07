@@ -1,5 +1,4 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
 import { QUERY_KEYS } from '@/constants'
 import type { PersonalExpense, NewPersonalExpensePayload } from '@/types'
 
@@ -8,14 +7,9 @@ export function usePersonalExpenses(memberId: string | null) {
     queryKey: [...QUERY_KEYS.PERSONAL_EXPENSES, memberId],
     queryFn: async (): Promise<PersonalExpense[]> => {
       if (!memberId) return []
-      const { data, error } = await supabase
-        .from('personal_expenses')
-        .select('*')
-        .eq('member_id', memberId)
-        .order('date', { ascending: false })
-        .order('created_at', { ascending: false })
-      if (error) throw error
-      return data ?? []
+      const res = await fetch(`/api/personal-expenses?member_id=${memberId}`)
+      if (!res.ok) throw new Error('Error al cargar gastos personales')
+      return res.json()
     },
     enabled: !!memberId,
   })
@@ -25,13 +19,9 @@ export function usePersonalExpense(id: string) {
   return useQuery({
     queryKey: QUERY_KEYS.PERSONAL_EXPENSE(id),
     queryFn: async (): Promise<PersonalExpense> => {
-      const { data, error } = await supabase
-        .from('personal_expenses')
-        .select('*')
-        .eq('id', id)
-        .single()
-      if (error) throw error
-      return data as PersonalExpense
+      const res = await fetch(`/api/personal-expenses/${id}`)
+      if (!res.ok) throw new Error('Error al cargar gasto personal')
+      return res.json()
     },
   })
 }
@@ -40,22 +30,15 @@ export function useCreatePersonalExpense() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (payload: NewPersonalExpensePayload) => {
-      const { error } = await supabase.from('personal_expenses').insert({
-        member_id: payload.member_id,
-        description: payload.description,
-        amount: payload.amount,
-        currency: payload.currency,
-        category: payload.category,
-        date: payload.date,
-        is_recurring: payload.is_recurring,
-        recurrence_type: payload.recurrence_type,
-        notes: payload.notes || null,
+      const res = await fetch('/api/personal-expenses', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
       })
-      if (error) throw error
+      if (!res.ok) throw new Error('Error al crear gasto personal')
+      return res.json()
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.PERSONAL_EXPENSES })
-    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: QUERY_KEYS.PERSONAL_EXPENSES }),
   })
 }
 
@@ -63,20 +46,13 @@ export function useUpdatePersonalExpense() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async ({ id, payload }: { id: string; payload: NewPersonalExpensePayload }) => {
-      const { error } = await supabase
-        .from('personal_expenses')
-        .update({
-          description: payload.description,
-          amount: payload.amount,
-          currency: payload.currency,
-          category: payload.category,
-          date: payload.date,
-          is_recurring: payload.is_recurring,
-          recurrence_type: payload.recurrence_type,
-          notes: payload.notes || null,
-        })
-        .eq('id', id)
-      if (error) throw error
+      const res = await fetch(`/api/personal-expenses/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      if (!res.ok) throw new Error('Error al actualizar gasto personal')
+      return res.json()
     },
     onSuccess: (_, { id, payload }) => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.PERSONAL_EXPENSES })
@@ -90,11 +66,9 @@ export function useDeletePersonalExpense() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from('personal_expenses').delete().eq('id', id)
-      if (error) throw error
+      const res = await fetch(`/api/personal-expenses/${id}`, { method: 'DELETE' })
+      if (!res.ok) throw new Error('Error al eliminar gasto personal')
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.PERSONAL_EXPENSES })
-    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: QUERY_KEYS.PERSONAL_EXPENSES }),
   })
 }

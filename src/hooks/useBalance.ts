@@ -1,5 +1,4 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
 import { QUERY_KEYS } from '@/constants'
 import { calculateBalances } from '@/lib/calculations'
 import { useMembers, useMembersMap } from './useMembers'
@@ -11,12 +10,9 @@ export function useSettlements() {
   return useQuery({
     queryKey: QUERY_KEYS.SETTLEMENTS,
     queryFn: async (): Promise<Settlement[]> => {
-      const { data, error } = await supabase
-        .from('settlements')
-        .select('*')
-        .order('date', { ascending: false })
-      if (error) throw error
-      return data ?? []
+      const res = await fetch('/api/settlements')
+      if (!res.ok) throw new Error('Error al cargar liquidaciones')
+      return res.json()
     },
   })
 }
@@ -36,8 +32,13 @@ export function useCreateSettlement() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (payload: { from_user_id: string; to_user_id: string; amount: number; currency: Currency; date: string; notes?: string }) => {
-      const { error } = await supabase.from('settlements').insert(payload)
-      if (error) throw error
+      const res = await fetch('/api/settlements', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      if (!res.ok) throw new Error('Error al registrar liquidación')
+      return res.json()
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.SETTLEMENTS })

@@ -1,10 +1,11 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { format } from 'date-fns'
-import { CATEGORIES, CURRENCIES } from '@/constants'
+import { useCategories } from '@/hooks/useCategories'
+import { CURRENCIES } from '@/constants'
 import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
 import { Button } from '@/components/ui/Button'
-import type { Currency, ExpenseCategory, RecurrenceType, NewPersonalExpensePayload } from '@/types'
+import type { Currency, RecurrenceType, NewPersonalExpensePayload } from '@/types'
 
 interface PersonalExpenseFormProps {
   memberId: string
@@ -15,10 +16,15 @@ interface PersonalExpenseFormProps {
 }
 
 export function PersonalExpenseForm({ memberId, initialData, isPending, submitLabel, onSubmit }: PersonalExpenseFormProps) {
+  const { data: categories = [] } = useCategories()
   const [description, setDescription] = useState(initialData?.description ?? '')
   const [amount, setAmount] = useState(initialData?.amount?.toString() ?? '')
   const [currency, setCurrency] = useState<Currency>(initialData?.currency ?? 'ARS')
-  const [category, setCategory] = useState<ExpenseCategory>(initialData?.category ?? 'otros')
+  const [category, setCategory] = useState<string>(initialData?.category ?? '')
+
+  useEffect(() => {
+    if (!category && categories.length > 0) setCategory(categories[0].id)
+  }, [categories, category])
   const [date, setDate] = useState(initialData?.date ?? format(new Date(), 'yyyy-MM-dd'))
   const [isRecurring, setIsRecurring] = useState(initialData?.is_recurring ?? false)
   const [recurrenceType, setRecurrenceType] = useState<RecurrenceType>(initialData?.recurrence_type ?? 'monthly')
@@ -49,7 +55,7 @@ export function PersonalExpenseForm({ memberId, initialData, isPending, submitLa
     })
   }
 
-  const categoryOptions = Object.entries(CATEGORIES).map(([v, l]) => ({ value: v, label: l }))
+  const categoryOptions = categories.map(c => ({ value: c.id, label: c.label }))
   const currencyOptions = CURRENCIES.map(c => ({ value: c, label: c }))
 
   return (
@@ -65,7 +71,7 @@ export function PersonalExpenseForm({ memberId, initialData, isPending, submitLa
         </div>
       </div>
 
-      <Select label="Categoría" options={categoryOptions} value={category} onChange={e => setCategory(e.target.value as ExpenseCategory)} />
+      <Select label="Categoría" options={categoryOptions} value={category} onChange={e => setCategory(e.target.value)} />
 
       <Input label="Fecha" type="date" value={date} onChange={e => setDate(e.target.value)} />
 

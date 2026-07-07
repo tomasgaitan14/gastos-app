@@ -1,13 +1,14 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { format } from 'date-fns'
 import { useMembers } from '@/hooks/useMembers'
 import { useExchangeRate } from '@/hooks/useExchangeRate'
+import { useCategories } from '@/hooks/useCategories'
 import { calculateSplits, formatCurrency } from '@/lib/calculations'
-import { CATEGORIES, CURRENCIES } from '@/constants'
+import { CURRENCIES } from '@/constants'
 import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
 import { Button } from '@/components/ui/Button'
-import type { Currency, ExpenseCategory, RecurrenceType, NewExpensePayload, ExpenseWithSplits } from '@/types'
+import type { Currency, RecurrenceType, NewExpensePayload, ExpenseWithSplits } from '@/types'
 
 interface ExpenseFormProps {
   initialData?: ExpenseWithSplits
@@ -19,6 +20,7 @@ interface ExpenseFormProps {
 export function ExpenseForm({ initialData, isPending, submitLabel, onSubmit }: ExpenseFormProps) {
   const { data: members = [] } = useMembers()
   const { rate } = useExchangeRate()
+  const { data: categories = [] } = useCategories()
 
   const initialExcludedIds = initialData
     ? initialData.splits.filter(s => s.is_excluded).map(s => s.user_id)
@@ -28,7 +30,11 @@ export function ExpenseForm({ initialData, isPending, submitLabel, onSubmit }: E
   const [amount, setAmount] = useState(initialData?.amount?.toString() ?? '')
   const [currency, setCurrency] = useState<Currency>(initialData?.currency ?? 'ARS')
   const [paidBy, setPaidBy] = useState(initialData?.paid_by ?? '')
-  const [category, setCategory] = useState<ExpenseCategory>(initialData?.category ?? 'otros')
+  const [category, setCategory] = useState<string>(initialData?.category ?? '')
+
+  useEffect(() => {
+    if (!category && categories.length > 0) setCategory(categories[0].id)
+  }, [categories, category])
   const [date, setDate] = useState(initialData?.date ?? format(new Date(), 'yyyy-MM-dd'))
   const [isRecurring, setIsRecurring] = useState(initialData?.is_recurring ?? false)
   const [recurrenceType, setRecurrenceType] = useState<RecurrenceType>(initialData?.recurrence_type ?? 'monthly')
@@ -73,7 +79,7 @@ export function ExpenseForm({ initialData, isPending, submitLabel, onSubmit }: E
     })
   }
 
-  const categoryOptions = Object.entries(CATEGORIES).map(([v, l]) => ({ value: v, label: l }))
+  const categoryOptions = categories.map(c => ({ value: c.id, label: c.label }))
   const memberOptions = [
     { value: '', label: 'Seleccioná...' },
     ...members.map(m => ({ value: m.id, label: m.name })),
@@ -99,7 +105,7 @@ export function ExpenseForm({ initialData, isPending, submitLabel, onSubmit }: E
           {errors.paidBy && <p className="text-xs text-rose-600 mt-1">{errors.paidBy}</p>}
         </div>
         <div className="flex-1">
-          <Select label="Categoría" options={categoryOptions} value={category} onChange={e => setCategory(e.target.value as ExpenseCategory)} />
+          <Select label="Categoría" options={categoryOptions} value={category} onChange={e => setCategory(e.target.value)} />
         </div>
       </div>
 

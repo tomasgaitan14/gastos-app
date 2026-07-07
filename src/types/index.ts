@@ -2,15 +2,13 @@ export type Currency = 'ARS' | 'USD'
 
 export type RecurrenceType = 'weekly' | 'monthly' | 'yearly'
 
-export type ExpenseCategory =
-  | 'alquiler'
-  | 'servicios'
-  | 'supermercado'
-  | 'salidas'
-  | 'salud'
-  | 'transporte'
-  | 'entretenimiento'
-  | 'otros'
+export type ExpenseCategory = string
+
+export interface Category {
+  id: string
+  label: string
+  created_at: string
+}
 
 export interface Member {
   id: string

@@ -1,6 +1,5 @@
 import { useParams, useNavigate } from 'react-router-dom'
 import { useExpense, useUpdateExpense } from '@/hooks/useExpenses'
-import { useMembers } from '@/hooks/useMembers'
 import { useExchangeRate } from '@/hooks/useExchangeRate'
 import { ExpenseForm } from '@/components/shared/ExpenseForm'
 import { TopBar } from '@/components/layout/TopBar'
@@ -11,12 +10,11 @@ export function EditExpense() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { data: expense, isLoading } = useExpense(id!)
-  const { data: members = [] } = useMembers()
   const { rate } = useExchangeRate()
   const updateExpense = useUpdateExpense()
 
   async function handleSubmit(payload: NewExpensePayload) {
-    await updateExpense.mutateAsync({ id: id!, payload, members, exchangeRate: rate })
+    await updateExpense.mutateAsync({ id: id!, payload, exchangeRate: rate })
     navigate(`/expenses/${id}`, { replace: true })
   }
 

@@ -6,7 +6,8 @@ import { Trash, PencilSimple } from '@phosphor-icons/react'
 import { useExpense, useDeleteExpense } from '@/hooks/useExpenses'
 import { useMembers } from '@/hooks/useMembers'
 import { formatCurrency } from '@/lib/calculations'
-import { CATEGORIES, RECURRENCE_LABELS } from '@/constants'
+import { RECURRENCE_LABELS } from '@/constants'
+import { useCategoryLabel } from '@/hooks/useCategories'
 import { TopBar } from '@/components/layout/TopBar'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
@@ -20,6 +21,7 @@ export function ExpenseDetail() {
   const { data: members = [] } = useMembers()
   const deleteExpense = useDeleteExpense()
   const [confirmOpen, setConfirmOpen] = useState(false)
+  const categoryLabel = useCategoryLabel(expense?.category ?? '')
 
   const payer = members.find(m => m.id === expense?.paid_by)
 
@@ -74,7 +76,7 @@ export function ExpenseDetail() {
             </div>
             <div className="flex-1 min-w-0">
               <h2 className="text-lg font-semibold text-zinc-900 leading-tight">{expense.description}</h2>
-              <p className="text-zinc-400 text-sm mt-0.5">{CATEGORIES[expense.category]}</p>
+              <p className="text-zinc-400 text-sm mt-0.5">{categoryLabel}</p>
             </div>
           </div>
           <div className="text-3xl font-bold tracking-tight text-zinc-900">{formatCurrency(expense.amount, expense.currency)}</div>
