@@ -4,7 +4,7 @@ import { google } from 'googleapis'
 // Endpoint temporal para crear el tab tenants y escribir el mapping correcto.
 // Se borrará después del primer uso exitoso.
 
-const TOMAS_SHEET_ID = '1CyyQBDgE7hqgkblKQDT7JYNatDDUW2ZM22diloZiZOs'
+const TOMAS_SHEET_ID = '1V1W-Fih0yy6Rva1RYhVue-yykqV-VkBQtw3jGmU1rnU'
 const SECRET = 'fix-registry-2026'
 
 function getClient() {
