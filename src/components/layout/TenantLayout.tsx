@@ -1,9 +1,20 @@
+import { useEffect } from 'react'
 import { Outlet } from 'react-router-dom'
 import { BottomNav } from './BottomNav'
 import { useTenant, TENANT_NOT_FOUND } from '@/hooks/useTenant'
+import { useTenantId } from '@/hooks/useTenantId'
+
+const LAST_TENANT_KEY = 'lastTenant'
 
 export function TenantLayout() {
+  const tenantId = useTenantId()
   const { isLoading, error } = useTenant()
+
+  useEffect(() => {
+    if (!isLoading && !error) {
+      localStorage.setItem(LAST_TENANT_KEY, tenantId)
+    }
+  }, [isLoading, error, tenantId])
 
   if (isLoading) {
     return (

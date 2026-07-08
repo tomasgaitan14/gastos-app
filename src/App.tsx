@@ -1,4 +1,5 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom'
+import { useEffect } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { TenantLayout } from '@/components/layout/TenantLayout'
 import { Dashboard } from '@/pages/Dashboard'
@@ -16,7 +17,16 @@ const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, refetchOnWindowFocus: false } },
 })
 
+const LAST_TENANT_KEY = 'lastTenant'
+
 function Home() {
+  const navigate = useNavigate()
+
+  useEffect(() => {
+    const last = localStorage.getItem(LAST_TENANT_KEY)
+    if (last) navigate(`/t/${last}/dashboard`, { replace: true })
+  }, [navigate])
+
   return (
     <div className="min-h-screen flex items-center justify-center px-6">
       <div className="text-center">
