@@ -18,20 +18,21 @@ Personal
 - **Deploy:** Vercel (free tier)
 
 ## Arquitectura API → Google Sheets
-- Credenciales via variables de entorno: `GOOGLE_SERVICE_ACCOUNT_EMAIL`, `GOOGLE_PRIVATE_KEY`, `GOOGLE_SHEET_ID`
-- Sheet ID original (tenant "tomas"): `1V1W-Fih0yy6Rva1RYhVue-yykqV-VkBQtx3jGmU1rnU`
+- Credenciales via variables de entorno: `GOOGLE_SERVICE_ACCOUNT_EMAIL`, `GOOGLE_PRIVATE_KEY`
 - Helpers en `api/_lib/` (sheets.ts, mappers.ts, calculations.ts, tenants.ts)
 
 ## Multi-tenancy
 - Cada tenant tiene su propio Google Sheet
 - Registry sheet (env var `REGISTRY_SHEET_ID`): mapea `tenantId → sheetId`
-  - Sheet ID del registry: `1CyyQBDgE7hqgkblKQDT7JYNatDDUW2ZM22diloZiZOs`
-  - Tab `tenants`, columnas: A = tenantId, B = sheetId (fila 1 = headers)
-- Tenant `tomas` ya cargado en el registry
+  - `REGISTRY_SHEET_ID = 1V1W-Fih0yy6Rva1RYhVue-yykqV-VkBQtw3jGmU1rnU`  ← sheet de datos de tomas, que también actúa como registry
+  - Tab `tenants`, columnas: A = tenantId, B = sheetId, C = name, D = created_at (fila 1 = headers)
+  - El sheet `1CyyQBDgE7hqgkblKQDT7JYNatDDUW2ZM22diloZiZOs` NO se usa — es un sheet vacío de otra cuenta
+- Tenant `tomas` ya cargado en el registry → apunta al mismo sheet (`1V1W-...w...`)
 - Onboarding manual: crear Sheet en Drive del usuario, compartirlo con service account, agregar fila al registry
 - URL estructura: `/t/:tenantId/dashboard`, `/t/:tenantId/expenses`, etc.
 - Helper `tp(tenantId, path)` en `src/lib/tenant.ts` para construir rutas con prefijo
 - Hook `useTenantId()` en `src/hooks/useTenantId.ts` para leer `:tenantId` de la URL
+- Hook `useTenant()` en `src/hooks/useTenant.ts` + endpoint `api/tenant.ts`: valida existencia del tenant antes de renderizar la UI (muestra error si el tenantId no existe en el registry)
 
 ## ⚠️ Vercel — dominios del proyecto
 El proyecto tiene registrados estos dominios (todos se actualizan en cada deploy):
