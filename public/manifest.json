@@ -2,7 +2,7 @@
   "name": "Gastos Compartidos",
   "short_name": "Gastos",
   "description": "Seguimiento de gastos compartidos con división proporcional por salario",
-  "start_url": "/",
+  "start_url": "/t/tomas/dashboard",
   "display": "standalone",
   "background_color": "#f4f4f5",
   "theme_color": "#f4f4f5",
