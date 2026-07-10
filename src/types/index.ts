@@ -1,6 +1,6 @@
 export type Currency = 'ARS' | 'USD'
 
-export type RecurrenceType = 'weekly' | 'monthly' | 'yearly'
+export type RecurrenceType = 'weekly' | 'monthly' | 'yearly' | 'installments'
 
 export type ExpenseCategory = string
 
@@ -28,6 +28,8 @@ export interface Expense {
   date: string
   is_recurring: boolean
   recurrence_type: RecurrenceType | null
+  installments_count: number | null
+  variable_amount: boolean
   notes: string | null
   created_at: string
   updated_at: string
@@ -98,6 +100,8 @@ export interface PersonalExpense {
   date: string
   is_recurring: boolean
   recurrence_type: RecurrenceType | null
+  installments_count: number | null
+  variable_amount: boolean
   notes: string | null
   created_at: string
 }
@@ -111,6 +115,8 @@ export interface NewPersonalExpensePayload {
   date: string
   is_recurring: boolean
   recurrence_type: RecurrenceType | null
+  installments_count: number | null
+  variable_amount: boolean
   notes: string
 }
 
@@ -123,6 +129,28 @@ export interface NewExpensePayload {
   date: string
   is_recurring: boolean
   recurrence_type: RecurrenceType | null
+  installments_count: number | null
+  variable_amount: boolean
   notes: string
   excluded_member_ids: string[]
+}
+
+export interface InstallmentPayment {
+  id: string
+  expense_id: string
+  installment_number: number
+  amount: number
+  currency: Currency
+  paid_date: string
+  notes: string | null
+  created_at: string
+}
+
+export interface NewInstallmentPaymentPayload {
+  expense_id: string
+  installment_number: number
+  amount: number
+  currency: Currency
+  paid_date: string
+  notes: string
 }

@@ -10,11 +10,13 @@ import { useMembers } from '@/hooks/useMembers'
 import { formatCurrency } from '@/lib/calculations'
 import { RECURRENCE_LABELS } from '@/constants'
 import { useCategoryLabel } from '@/hooks/useCategories'
+import { getCurrentInstallment } from '@/lib/installments'
 import { TopBar } from '@/components/layout/TopBar'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
 import { Skeleton } from '@/components/ui/Skeleton'
+import { InstallmentsSection } from '@/components/shared/InstallmentsSection'
 
 export function PersonalExpenseDetail() {
   const { id } = useParams<{ id: string }>()
@@ -84,7 +86,12 @@ export function PersonalExpenseDetail() {
           </div>
           <div className="text-3xl font-bold tracking-tight text-zinc-900">{formatCurrency(expense.amount, expense.currency)}</div>
           <div className="flex flex-wrap gap-2">
-            {expense.is_recurring && <Badge variant="neutral">{RECURRENCE_LABELS[expense.recurrence_type!]}</Badge>}
+            {expense.is_recurring && (
+              expense.recurrence_type === 'installments' && expense.installments_count
+                ? <Badge variant="neutral">Cuota {getCurrentInstallment(expense.date)} de {expense.installments_count}</Badge>
+                : <Badge variant="neutral">{RECURRENCE_LABELS[expense.recurrence_type!]}</Badge>
+            )}
+            {expense.variable_amount && <Badge variant="neutral">Monto variable</Badge>}
             <Badge variant="default">{expense.currency}</Badge>
             <Badge variant="default">Personal</Badge>
           </div>
@@ -95,6 +102,18 @@ export function PersonalExpenseDetail() {
           <InfoRow label="Fecha" value={<span className="text-sm text-zinc-900">{format(new Date(expense.date), "d 'de' MMMM, yyyy", { locale: es })}</span>} border />
           {expense.notes && <InfoRow label="Notas" value={<span className="text-sm text-zinc-600">{expense.notes}</span>} border />}
         </div>
+
+        {expense.recurrence_type === 'installments' && expense.installments_count && (
+          <InstallmentsSection
+            expenseId={expense.id}
+            startDate={expense.date}
+            installmentsCount={expense.installments_count}
+            variableAmount={expense.variable_amount}
+            referenceAmount={expense.amount}
+            currency={expense.currency}
+            type="personal"
+          />
+        )}
       </div>
 
       <Modal open={confirmOpen} onClose={() => setConfirmOpen(false)} title="Eliminar gasto">

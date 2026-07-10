@@ -28,6 +28,8 @@ export function PersonalExpenseForm({ memberId, initialData, isPending, submitLa
   const [date, setDate] = useState(initialData?.date ?? format(new Date(), 'yyyy-MM-dd'))
   const [isRecurring, setIsRecurring] = useState(initialData?.is_recurring ?? false)
   const [recurrenceType, setRecurrenceType] = useState<RecurrenceType>(initialData?.recurrence_type ?? 'monthly')
+  const [installmentsCount, setInstallmentsCount] = useState(initialData?.installments_count?.toString() ?? '')
+  const [variableAmount, setVariableAmount] = useState(initialData?.variable_amount ?? false)
   const [notes, setNotes] = useState(initialData?.notes ?? '')
   const [errors, setErrors] = useState<Record<string, string>>({})
 
@@ -35,6 +37,10 @@ export function PersonalExpenseForm({ memberId, initialData, isPending, submitLa
     const errs: Record<string, string> = {}
     if (!description.trim()) errs.description = 'Ingresá una descripción'
     if (!amount || parseFloat(amount) <= 0) errs.amount = 'Ingresá un monto válido'
+    if (isRecurring && recurrenceType === 'installments') {
+      const count = parseInt(installmentsCount)
+      if (!count || count < 2) errs.installmentsCount = 'Ingresá al menos 2 cuotas'
+    }
     setErrors(errs)
     return Object.keys(errs).length === 0
   }
@@ -42,6 +48,7 @@ export function PersonalExpenseForm({ memberId, initialData, isPending, submitLa
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!validate()) return
+    const isInstallments = isRecurring && recurrenceType === 'installments'
     onSubmit({
       member_id: memberId,
       description: description.trim(),
@@ -51,6 +58,8 @@ export function PersonalExpenseForm({ memberId, initialData, isPending, submitLa
       date,
       is_recurring: isRecurring,
       recurrence_type: isRecurring ? recurrenceType : null,
+      installments_count: isInstallments ? parseInt(installmentsCount) : null,
+      variable_amount: isInstallments ? variableAmount : false,
       notes,
     })
   }
@@ -82,7 +91,42 @@ export function PersonalExpenseForm({ memberId, initialData, isPending, submitLa
         <span className="text-sm font-medium text-zinc-700">Gasto recurrente</span>
       </label>
       {isRecurring && (
-        <Select options={[{ value: 'weekly', label: 'Semanal' }, { value: 'monthly', label: 'Mensual' }, { value: 'yearly', label: 'Anual' }]} value={recurrenceType} onChange={e => setRecurrenceType(e.target.value as RecurrenceType)} />
+        <>
+          <Select
+            options={[
+              { value: 'weekly', label: 'Semanal' },
+              { value: 'monthly', label: 'Mensual' },
+              { value: 'yearly', label: 'Anual' },
+              { value: 'installments', label: 'En cuotas' },
+            ]}
+            value={recurrenceType}
+            onChange={e => setRecurrenceType(e.target.value as RecurrenceType)}
+          />
+          {recurrenceType === 'installments' && (
+            <div className="flex flex-col gap-3">
+              <Input
+                label="Total de cuotas"
+                type="number"
+                min="2"
+                step="1"
+                placeholder="Ej: 12"
+                value={installmentsCount}
+                onChange={e => setInstallmentsCount(e.target.value)}
+                error={errors.installmentsCount}
+              />
+              <p className="text-xs text-zinc-400 -mt-2">La fecha del gasto se usa como inicio (primera cuota).</p>
+              <label className="flex items-center gap-3 cursor-pointer">
+                <div
+                  onClick={() => setVariableAmount(p => !p)}
+                  className={['w-10 h-6 rounded-full transition-colors relative cursor-pointer', variableAmount ? 'bg-emerald-500' : 'bg-zinc-200'].join(' ')}
+                >
+                  <div className={['absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform', variableAmount ? 'translate-x-5' : 'translate-x-1'].join(' ')} />
+                </div>
+                <span className="text-sm font-medium text-zinc-700">El monto puede variar (cuotas con interés)</span>
+              </label>
+            </div>
+          )}
+        </>
       )}
 
       <div className="flex flex-col gap-1.5">

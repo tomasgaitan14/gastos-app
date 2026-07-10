@@ -4,6 +4,7 @@ export const RECURRENCE_LABELS: Record<RecurrenceType, string> = {
   weekly: 'Semanal',
   monthly: 'Mensual',
   yearly: 'Anual',
+  installments: 'En cuotas',
 }
 
 export const CURRENCIES: Currency[] = ['ARS', 'USD']
@@ -20,6 +21,8 @@ export const QUERY_KEYS = {
   PERSONAL_EXPENSES: ['personal_expenses'] as const,
   PERSONAL_EXPENSE: (id: string) => ['personal_expenses', id] as const,
   CATEGORIES: ['categories'] as const,
+  INSTALLMENT_PAYMENTS: (expenseId: string) => ['installment_payments', expenseId] as const,
+  PERSONAL_INSTALLMENT_PAYMENTS: (expenseId: string) => ['personal_installment_payments', expenseId] as const,
 }
 
 export const STALE_TIMES = {

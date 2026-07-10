@@ -32,6 +32,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       date: payload.date,
       is_recurring: payload.is_recurring,
       recurrence_type: payload.recurrence_type,
+      installments_count: payload.installments_count ?? null,
+      variable_amount: payload.variable_amount ?? false,
       notes: payload.notes || null,
     }
     await updateRow(sheetId, 'personal_expenses', found.rowNumber, personalExpenseToRow(updated))

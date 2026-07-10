@@ -11,6 +11,7 @@ import { useExchangeRate } from '@/hooks/useExchangeRate'
 import { useCategories } from '@/hooks/useCategories'
 import { formatCurrency } from '@/lib/calculations'
 import { RECURRENCE_LABELS } from '@/constants'
+import { getCurrentInstallment } from '@/lib/installments'
 import { Badge } from '@/components/ui/Badge'
 import { Select } from '@/components/ui/Select'
 import { ExpenseItemSkeleton } from '@/components/ui/Skeleton'
@@ -336,7 +337,11 @@ function SharedGroup({ monthKey, items, members, tenantId }: { monthKey: string;
                   <span className="text-xs text-zinc-300">·</span>
                   <span className="text-xs text-zinc-400">{format(new Date(expense.date + 'T00:00:00'), 'd MMM', { locale: es })}</span>
                   <Badge variant="default">{categoryLabel(expense.category)}</Badge>
-                  {expense.is_recurring && <Badge variant="neutral">{RECURRENCE_LABELS[expense.recurrence_type!]}</Badge>}
+                  {expense.is_recurring && (
+                    expense.recurrence_type === 'installments' && expense.installments_count
+                      ? <Badge variant="neutral">Cuota {getCurrentInstallment(expense.date)} de {expense.installments_count}</Badge>
+                      : <Badge variant="neutral">{RECURRENCE_LABELS[expense.recurrence_type!]}</Badge>
+                  )}
                 </div>
               </div>
               <span className="text-sm font-semibold text-zinc-900 shrink-0">{formatCurrency(expense.amount, expense.currency)}</span>
@@ -373,7 +378,11 @@ function PersonalGroup({ monthKey, items, tenantId }: { monthKey: string; items:
               <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                 <span className="text-xs text-zinc-400">{format(new Date(expense.date + 'T00:00:00'), 'd MMM', { locale: es })}</span>
                 <Badge variant="default">{categoryLabel(expense.category)}</Badge>
-                {expense.is_recurring && <Badge variant="neutral">{RECURRENCE_LABELS[expense.recurrence_type!]}</Badge>}
+                {expense.is_recurring && (
+                  expense.recurrence_type === 'installments' && expense.installments_count
+                    ? <Badge variant="neutral">Cuota {getCurrentInstallment(expense.date)} de {expense.installments_count}</Badge>
+                    : <Badge variant="neutral">{RECURRENCE_LABELS[expense.recurrence_type!]}</Badge>
+                )}
               </div>
             </div>
             <span className="text-sm font-semibold text-zinc-900 shrink-0">{formatCurrency(expense.amount, expense.currency)}</span>
