@@ -54,6 +54,8 @@ export function EditPersonalExpense() {
           date: expense.date,
           is_recurring: expense.is_recurring,
           recurrence_type: expense.recurrence_type,
+          installments_count: expense.installments_count,
+          variable_amount: expense.variable_amount,
           notes: expense.notes ?? '',
         }}
         isPending={updateExpense.isPending}
