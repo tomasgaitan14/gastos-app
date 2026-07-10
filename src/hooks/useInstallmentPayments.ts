@@ -5,7 +5,6 @@ import type { InstallmentPayment, NewInstallmentPaymentPayload } from '@/types'
 
 export function useInstallmentPayments(expenseId: string | undefined, type: 'shared' | 'personal' = 'shared') {
   const tenantId = useTenantId()
-  const endpoint = type === 'personal' ? 'personal-installment-payments' : 'installment-payments'
   const queryKey = type === 'personal'
     ? [...QUERY_KEYS.PERSONAL_INSTALLMENT_PAYMENTS(expenseId!), tenantId]
     : [...QUERY_KEYS.INSTALLMENT_PAYMENTS(expenseId!), tenantId]
@@ -13,7 +12,7 @@ export function useInstallmentPayments(expenseId: string | undefined, type: 'sha
   return useQuery({
     queryKey,
     queryFn: async (): Promise<InstallmentPayment[]> => {
-      const res = await fetch(`/api/${endpoint}?tenantId=${tenantId}&expense_id=${expenseId}`)
+      const res = await fetch(`/api/installment-payments?tenantId=${tenantId}&expense_id=${expenseId}&type=${type}`)
       if (!res.ok) throw new Error('Error al cargar pagos de cuotas')
       return res.json()
     },
@@ -24,11 +23,10 @@ export function useInstallmentPayments(expenseId: string | undefined, type: 'sha
 export function useUpsertInstallmentPayment(type: 'shared' | 'personal' = 'shared') {
   const queryClient = useQueryClient()
   const tenantId = useTenantId()
-  const endpoint = type === 'personal' ? 'personal-installment-payments' : 'installment-payments'
 
   return useMutation({
     mutationFn: async (payload: NewInstallmentPaymentPayload): Promise<InstallmentPayment> => {
-      const res = await fetch(`/api/${endpoint}?tenantId=${tenantId}`, {
+      const res = await fetch(`/api/installment-payments?tenantId=${tenantId}&type=${type}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),

@@ -4,11 +4,11 @@ import { rowToInstallmentPayment, installmentPaymentToRow } from '../_lib/mapper
 import { resolveTenantSheetId } from '../_lib/tenants.js'
 import type { InstallmentPayment, NewInstallmentPaymentPayload } from '../../src/types/index.js'
 
-const TAB = 'installment_payments'
-
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const tenantId = req.query.tenantId as string | undefined
   if (!tenantId) return res.status(400).json({ error: 'tenantId requerido' })
+  const type = req.query.type as string | undefined
+  const TAB = type === 'personal' ? 'personal_installment_payments' : 'installment_payments'
   let sheetId: string
   try { sheetId = await resolveTenantSheetId(tenantId) }
   catch { return res.status(404).json({ error: 'Tenant no encontrado' }) }
