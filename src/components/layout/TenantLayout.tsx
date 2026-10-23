@@ -3,6 +3,7 @@ import { Outlet } from 'react-router-dom'
 import { BottomNav } from './BottomNav'
 import { useTenant, TENANT_NOT_FOUND } from '@/hooks/useTenant'
 import { useTenantId } from '@/hooks/useTenantId'
+import { setTenantTag } from '@/lib/onesignal'
 
 const LAST_TENANT_KEY = 'lastTenant'
 
@@ -13,6 +14,7 @@ export function TenantLayout() {
   useEffect(() => {
     if (!isLoading && !error) {
       localStorage.setItem(LAST_TENANT_KEY, tenantId)
+      setTenantTag(tenantId)
     }
   }, [isLoading, error, tenantId])
 

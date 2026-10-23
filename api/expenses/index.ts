@@ -3,6 +3,7 @@ import { readRows, appendRow } from '../_lib/sheets.js'
 import { rowToExpense, expenseToRow, rowToSplit, rowToMember, splitToRow } from '../_lib/mappers.js'
 import { calculateSplits } from '../_lib/calculations.js'
 import { resolveTenantSheetId } from '../_lib/tenants.js'
+import { notifyNewExpense } from '../_lib/notifications.js'
 import type { Expense, ExpenseSplit, ExpenseWithSplits, NewExpensePayload } from '../../src/types/index.js'
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -71,6 +72,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     for (const split of expenseSplits) {
       await appendRow(sheetId, 'expense_splits', splitToRow(split))
     }
+
+    const paidByName = members.find(m => m.id === payload.paid_by)?.name ?? 'alguien'
+    await notifyNewExpense(tenantId, expense.description, expense.amount, expense.currency, paidByName).catch(() => {})
 
     return res.status(201).json({ ...expense, splits: expenseSplits })
   }
