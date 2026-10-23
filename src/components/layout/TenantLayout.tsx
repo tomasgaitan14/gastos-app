@@ -14,7 +14,7 @@ export function TenantLayout() {
   useEffect(() => {
     if (!isLoading && !error) {
       localStorage.setItem(LAST_TENANT_KEY, tenantId)
-      setTenantTag(tenantId)
+      setTenantTag(tenantId).catch(() => {})
     }
   }, [isLoading, error, tenantId])
 
