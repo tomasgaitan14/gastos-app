@@ -20,7 +20,7 @@ export async function notifyNewExpense(
   const payload = {
     app_id: appId,
     filters: [{ field: 'tag', key: 'tenantId', relation: '=', value: tenantId }],
-    headings: { en: '💸 Nuevo gasto' },
+    headings: { en: '💸 Nuevo gasto agregado' },
     contents: { en: body },
   }
 
