@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { ArrowsClockwise, PencilSimple, Plus, Trash, UserPlus } from '@phosphor-icons/react'
+import { ArrowsClockwise, Bell, PencilSimple, Plus, Trash, UserPlus } from '@phosphor-icons/react'
+import OneSignal from 'react-onesignal'
 import { useMembers, useAddMember, useUpdateMember, useDeleteMember } from '@/hooks/useMembers'
 import { useExchangeRate } from '@/hooks/useExchangeRate'
 import { useCategories, useAddCategory, useUpdateCategory, useDeleteCategory } from '@/hooks/useCategories'
@@ -28,6 +29,22 @@ export function Settings() {
   const deleteCategory = useDeleteCategory()
 
   const [manualRate, setManualRate] = useState('')
+  const [notifPermission, setNotifPermission] = useState<boolean>(false)
+  const [notifRequesting, setNotifRequesting] = useState(false)
+
+  useEffect(() => {
+    setNotifPermission(OneSignal.Notifications.permission)
+  }, [])
+
+  async function handleEnableNotifications() {
+    setNotifRequesting(true)
+    try {
+      await OneSignal.Notifications.requestPermission()
+      setNotifPermission(OneSignal.Notifications.permission)
+    } finally {
+      setNotifRequesting(false)
+    }
+  }
 
   const [modalOpen, setModalOpen] = useState(false)
   const [editingMember, setEditingMember] = useState<Member | null>(null)
@@ -249,6 +266,29 @@ export function Settings() {
                 </form>
                 {newCategoryError && <p className="text-xs text-rose-600 mt-1">{newCategoryError}</p>}
               </div>
+            )}
+          </div>
+        </section>
+
+        {/* Notificaciones */}
+        <section>
+          <p className="text-sm font-semibold text-zinc-700 mb-2">Notificaciones</p>
+          <div className="bg-white rounded-2xl border border-zinc-200/60 p-4 flex items-center gap-3">
+            <div className={['w-9 h-9 rounded-xl flex items-center justify-center shrink-0', notifPermission ? 'bg-emerald-100 text-emerald-600' : 'bg-zinc-100 text-zinc-400'].join(' ')}>
+              <Bell size={18} weight={notifPermission ? 'fill' : 'regular'} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-zinc-900">
+                {notifPermission ? 'Notificaciones activas' : 'Notificaciones desactivadas'}
+              </p>
+              <p className="text-xs text-zinc-400 mt-0.5">
+                {notifPermission ? 'Te avisamos cuando se carga un gasto nuevo' : 'Activá para recibir avisos de gastos nuevos'}
+              </p>
+            </div>
+            {!notifPermission && (
+              <Button variant="secondary" loading={notifRequesting} onClick={handleEnableNotifications}>
+                Activar
+              </Button>
             )}
           </div>
         </section>
